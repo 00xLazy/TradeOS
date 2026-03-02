@@ -69,6 +69,9 @@ export class PnLTracker {
 
     this.db = new Database(path.join(dbDir, 'trades.db'));
     this.initDB();
+
+    // 设置数据库文件权限为 600（仅 owner 可读写）
+    fs.chmodSync(path.join(dbDir, 'trades.db'), 0o600);
   }
 
   /**

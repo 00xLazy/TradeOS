@@ -1,7 +1,7 @@
 ---
 name: cex-trading
 description: 中心化交易所交易与资产管理。通过自然语言在 Binance、OKX、Bybit 等 100+ 交易所下单交易，监控账户余额，追踪损益。
-version: 0.1.0
+version: 0.2.0
 author: 00xLazy
 permissions:
   - filesystem
