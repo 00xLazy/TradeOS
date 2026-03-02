@@ -216,6 +216,12 @@ export class BalanceMonitor {
       case 'portfolio_gain':
         return this.checkPortfolioRule(rule);
 
+      case 'margin_ratio':
+        return this.checkMarginRatioRule(rule);
+
+      case 'large_transfer':
+        return this.checkLargeTransferRule(rule);
+
       default:
         return null;
     }
@@ -308,6 +314,102 @@ export class BalanceMonitor {
       data: { startValue, endValue, changePct, windowMs: window },
       timestamp: Date.now(),
     };
+  }
+
+  private async checkMarginRatioRule(rule: AlertRule): Promise<AlertEvent | null> {
+    const { exchange, threshold } = rule.params;
+    if (!exchange) return null;
+
+    const ex = await this.exchangeManager.getExchange(this.getPassword!(), exchange);
+    let balance: Record<string, any>;
+
+    // 尝试优先读取合约账户保证金信息
+    try {
+      balance = await ex.fetchBalance({ type: 'future' });
+    } catch {
+      balance = await ex.fetchBalance();
+    }
+
+    const rawRatio = this.extractMarginRatio(balance);
+    if (rawRatio === null) return null;
+
+    const ratioPercent = rawRatio <= 1 ? rawRatio * 100 : rawRatio;
+    if (ratioPercent > threshold) return null;
+
+    return {
+      rule,
+      message: `${exchange} 保证金率告警：当前 ${ratioPercent.toFixed(2)}%，低于阈值 ${threshold.toFixed(2)}%`,
+      data: {
+        exchange,
+        marginRatioPercent: ratioPercent,
+        thresholdPercent: threshold,
+      },
+      timestamp: Date.now(),
+    };
+  }
+
+  private async checkLargeTransferRule(rule: AlertRule): Promise<AlertEvent | null> {
+    const { coin, exchange, threshold } = rule.params;
+    if (!coin) return null;
+
+    const normalizedCoin = coin.toUpperCase();
+    const { exchanges, aggregated } = await this.exchangeManager.getAllBalances(this.getPassword!());
+    let currentTotal: number;
+
+    if (exchange) {
+      currentTotal = exchanges
+        .filter(e => e.exchangeId === exchange)
+        .reduce((sum, e) => {
+          const item = e.balances.find(b => b.coin.toUpperCase() === normalizedCoin);
+          return sum + (item?.total ?? 0);
+        }, 0);
+    } else {
+      currentTotal = aggregated.find(a => a.coin.toUpperCase() === normalizedCoin)?.total ?? 0;
+    }
+
+    const lastKey = `transfer:${exchange ?? 'all'}:${normalizedCoin}`;
+    const lastTotal = this.lastBalances.get(lastKey);
+    this.lastBalances.set(lastKey, currentTotal);
+    if (lastTotal === undefined) return null;
+
+    const delta = currentTotal - lastTotal;
+    if (Math.abs(delta) < threshold) return null;
+
+    const direction = delta > 0 ? '转入/增加' : '转出/减少';
+    return {
+      rule,
+      message: `${normalizedCoin} 发生大额${direction}：${Math.abs(delta).toFixed(6)} ${normalizedCoin}（${lastTotal.toFixed(6)} → ${currentTotal.toFixed(6)}）`,
+      data: {
+        coin: normalizedCoin,
+        exchange: exchange ?? 'all',
+        previous: lastTotal,
+        current: currentTotal,
+        delta,
+        threshold,
+      },
+      timestamp: Date.now(),
+    };
+  }
+
+  private extractMarginRatio(balance: Record<string, any>): number | null {
+    const candidates = [
+      balance.marginRatio,
+      balance.marginLevel,
+      balance.info?.marginRatio,
+      balance.info?.margin_level,
+      balance.info?.riskRate,
+      balance.info?.risk_ratio,
+    ];
+
+    for (const value of candidates) {
+      if (value === undefined || value === null || value === '') continue;
+      const ratio = typeof value === 'number' ? value : Number(value);
+      if (Number.isFinite(ratio) && ratio > 0) {
+        return ratio;
+      }
+    }
+
+    return null;
   }
 
   // ─── 通知 ───

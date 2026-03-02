@@ -128,8 +128,9 @@ export class SecurityReporter {
     this.saveConfig();
 
     if (updates.pollingMs && this.timeoutId && this.getPassword) {
+      const getPassword = this.getPassword;
       this.stop();
-      this.start(this.getPassword);
+      this.start(getPassword);
     }
   }
 

@@ -123,8 +123,9 @@ export class AnomalyDetector {
     this.saveConfig();
 
     if (updates.pollingMs && this.timeoutId && this.getPassword) {
+      const getPassword = this.getPassword;
       this.stop();
-      this.start(this.getPassword);
+      this.start(getPassword);
     }
   }
 
@@ -152,7 +153,7 @@ export class AnomalyDetector {
   private async checkBalanceDrop(masterPassword: string): Promise<void> {
     let currentSnapshot: BalanceSnapshot;
     try {
-      const { exchanges, totalUSD } = await this.exchangeManager.getAllBalances(masterPassword);
+      const { exchanges, totalUSD, failedExchanges } = await this.exchangeManager.getAllBalances(masterPassword);
       currentSnapshot = {
         timestamp: Date.now(),
         totalUSD,
@@ -162,6 +163,14 @@ export class AnomalyDetector {
       // 重置所有交易所的 API 失败计数（getAllBalances 成功说明连接正常）
       for (const e of exchanges) {
         this.apiFailureCounts.set(e.exchangeId, 0);
+      }
+
+      // 部分交易所失败时跳过本轮余额异常检测，避免因不完整数据导致误报
+      if (failedExchanges.length > 0) {
+        for (const failed of failedExchanges) {
+          await this.recordApiFailure(failed.exchangeId, failed.error);
+        }
+        return;
       }
     } catch (err: any) {
       // API 调用失败，记录失败次数

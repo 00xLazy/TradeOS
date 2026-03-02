@@ -96,7 +96,7 @@ export class OrderExecutor {
     );
 
     const currentPrice = ticker.last;
-    const price = request.type === 'market' ? currentPrice : (request.price ?? currentPrice);
+    const price = this.getEstimatedExecutionPrice(request, ticker);
     const estimatedValue = request.amount * price;
     const feeRate = await this.exchangeManager.getTradingFeeRate(masterPassword, request.exchange, request.symbol, 'taker');
     const estimatedFee = estimatedValue * feeRate;
@@ -183,7 +183,7 @@ export class OrderExecutor {
     const ticker = await this.exchangeManager.getTicker(
       masterPassword, request.exchange, request.symbol
     );
-    const estimatedCost = request.amount * (request.price ?? ticker.last);
+    const estimatedCost = request.amount * this.getEstimatedExecutionPrice(request, ticker);
     const riskCheck = this.riskGuard.checkOrder(request, estimatedCost, ticker.last);
 
     if (riskCheck.blocked) {
@@ -382,6 +382,24 @@ export class OrderExecutor {
     // 移除可能的 secret
     msg = msg.replace(/secret[=:]\s*[^\s&'",}]+/gi, 'secret=***');
     return msg;
+  }
+
+  /**
+   * 估算下单可成交价格：
+   * - 市价买单优先使用 ask
+   * - 市价卖单优先使用 bid
+   * - 其他场景回退到用户限价或 last
+   */
+  private getEstimatedExecutionPrice(request: OrderRequest, ticker: TickerInfo): number {
+    if (request.type === 'market') {
+      if (request.side === 'buy' && ticker.ask > 0) return ticker.ask;
+      if (request.side === 'sell' && ticker.bid > 0) return ticker.bid;
+    }
+    if (request.price && request.price > 0) return request.price;
+    if (ticker.last > 0) return ticker.last;
+    if (request.side === 'buy' && ticker.ask > 0) return ticker.ask;
+    if (request.side === 'sell' && ticker.bid > 0) return ticker.bid;
+    return 0;
   }
 
   private async setLeverage(
