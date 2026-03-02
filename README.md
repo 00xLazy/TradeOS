@@ -250,17 +250,6 @@ All data is stored locally on your machine:
 
 ---
 
-## Roadmap
-
-- [ ] WebSocket real-time monitoring (CCXT Pro `watchBalance`)
-- [ ] CoinAnk API integration (fear & greed index, funding rates, liquidation data)
-- [ ] DEX trading support (BNB Chain / EVM via viem)
-- [ ] ERC-8004 on-chain agent identity
-- [ ] Strategy mode (grid trading, DCA, trailing stop)
-- [ ] Multi-language alert messages
-
----
-
 ## License
 
 [MIT](./LICENSE)

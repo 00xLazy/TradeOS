@@ -260,17 +260,6 @@ cex-trading/
 
 ---
 
-## 未来计划
-
-- [ ] WebSocket 实时监控模式（CCXT Pro `watchBalance`）
-- [ ] 接入 CoinAnk API（恐惧贪婪指数、资金费率、爆仓数据）
-- [ ] DEX 交易支持（BNB Chain / EVM，基于 viem）
-- [ ] ERC-8004 链上 Agent 身份
-- [ ] 策略模式（网格交易、定投、追踪止损）
-- [ ] 多语言告警消息
-
----
-
 ## 许可证
 
 [MIT](./LICENSE)
