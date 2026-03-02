@@ -1,0 +1,330 @@
+/**
+ * exchange-manager.ts - CCXT 交易所连接管理
+ *
+ * 基于 CCXT 统一 API，封装多交易所连接、行情查询、余额查询等。
+ */
+
+import ccxt, { type Exchange, type Balances, type Ticker, type Market } from 'ccxt';
+import { KeyVault, type ExchangeCredential } from './key-vault.js';
+
+// ─── 支持的交易所 ───
+
+export const SUPPORTED_EXCHANGES = [
+  'binance',
+  'okx',
+  'bybit',
+  'gateio',
+  'bitget',
+  'coinbase',
+  'kucoin',
+  'htx',
+  'mexc',
+  'cryptocom',
+] as const;
+
+export type SupportedExchangeId = typeof SUPPORTED_EXCHANGES[number];
+
+// ─── 类型定义 ───
+
+export interface FormattedBalance {
+  coin: string;
+  free: number;
+  used: number;
+  total: number;
+  valueUSD: number;
+}
+
+export interface ExchangeBalance {
+  exchangeId: string;
+  label: string;
+  balances: FormattedBalance[];
+  totalUSD: number;
+  timestamp: number;
+}
+
+export interface TickerInfo {
+  symbol: string;
+  last: number;
+  bid: number;
+  ask: number;
+  high: number;
+  low: number;
+  volume: number;
+  changePercent: number;
+  timestamp: number;
+}
+
+// ─── ExchangeManager 类 ───
+
+export class ExchangeManager {
+  private vault: KeyVault;
+  private instances: Map<string, Exchange> = new Map();
+
+  constructor(vault: KeyVault) {
+    this.vault = vault;
+  }
+
+  /**
+   * 获取或创建 CCXT 交易所实例
+   */
+  async getExchange(
+    masterPassword: string,
+    exchangeId: string,
+    label?: string
+  ): Promise<Exchange> {
+    const cacheKey = `${exchangeId}:${label ?? 'default'}`;
+    const cached = this.instances.get(cacheKey);
+    if (cached) return cached;
+
+    const cred = await this.vault.getCredential(masterPassword, exchangeId, label);
+    if (!cred) {
+      throw new Error(`未找到交易所 ${exchangeId} 的 API Key。请先添加。`);
+    }
+
+    const exchange = this.createInstance(cred);
+    await exchange.loadMarkets();
+    this.instances.set(cacheKey, exchange);
+    return exchange;
+  }
+
+  /**
+   * 查询单个交易所余额
+   */
+  async getBalance(
+    masterPassword: string,
+    exchangeId: string,
+    label?: string
+  ): Promise<ExchangeBalance> {
+    const exchange = await this.getExchange(masterPassword, exchangeId, label);
+    const balance: Balances = await exchange.fetchBalance();
+
+    // 获取各币种 USD 价格用于估值
+    const tickers = await this.getUSDPrices(exchange, balance);
+
+    const formatted: FormattedBalance[] = [];
+    let totalUSD = 0;
+
+    const totalBal = balance.total as unknown as Record<string, number>;
+    const freeBal = balance.free as unknown as Record<string, number>;
+    const usedBal = balance.used as unknown as Record<string, number>;
+
+    for (const coin of Object.keys(totalBal)) {
+      const total = totalBal[coin] ?? 0;
+      if (total === 0) continue;
+
+      const free = freeBal[coin] ?? 0;
+      const used = usedBal[coin] ?? 0;
+      const priceUSD = tickers[coin] ?? (coin === 'USDT' || coin === 'USDC' || coin === 'BUSD' ? 1 : 0);
+      const valueUSD = total * priceUSD;
+
+      formatted.push({ coin, free, used, total, valueUSD });
+      totalUSD += valueUSD;
+    }
+
+    // 按 USD 价值降序排列
+    formatted.sort((a, b) => b.valueUSD - a.valueUSD);
+
+    return {
+      exchangeId,
+      label: label ?? 'default',
+      balances: formatted,
+      totalUSD,
+      timestamp: Date.now(),
+    };
+  }
+
+  /**
+   * 查询所有已配置交易所的余额
+   */
+  async getAllBalances(masterPassword: string): Promise<{
+    exchanges: ExchangeBalance[];
+    totalUSD: number;
+    aggregated: FormattedBalance[];
+  }> {
+    const credentials = await this.vault.listCredentials(masterPassword);
+    const exchanges: ExchangeBalance[] = [];
+    const coinMap: Map<string, FormattedBalance> = new Map();
+    let totalUSD = 0;
+
+    // 并行查询所有交易所
+    const results = await Promise.allSettled(
+      credentials.map(cred =>
+        this.getBalance(masterPassword, cred.exchangeId, cred.label)
+      )
+    );
+
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        const eb = result.value;
+        exchanges.push(eb);
+        totalUSD += eb.totalUSD;
+
+        // 聚合各币种
+        for (const b of eb.balances) {
+          const existing = coinMap.get(b.coin);
+          if (existing) {
+            existing.free += b.free;
+            existing.used += b.used;
+            existing.total += b.total;
+            existing.valueUSD += b.valueUSD;
+          } else {
+            coinMap.set(b.coin, { ...b });
+          }
+        }
+      }
+    }
+
+    const aggregated = Array.from(coinMap.values())
+      .sort((a, b) => b.valueUSD - a.valueUSD);
+
+    return { exchanges, totalUSD, aggregated };
+  }
+
+  /**
+   * 查询行情
+   */
+  async getTicker(
+    masterPassword: string,
+    exchangeId: string,
+    symbol: string
+  ): Promise<TickerInfo> {
+    const exchange = await this.getExchange(masterPassword, exchangeId);
+    const ticker: Ticker = await exchange.fetchTicker(symbol);
+
+    return {
+      symbol: ticker.symbol,
+      last: ticker.last ?? 0,
+      bid: ticker.bid ?? 0,
+      ask: ticker.ask ?? 0,
+      high: ticker.high ?? 0,
+      low: ticker.low ?? 0,
+      volume: ticker.baseVolume ?? 0,
+      changePercent: ticker.percentage ?? 0,
+      timestamp: ticker.timestamp ?? Date.now(),
+    };
+  }
+
+  /**
+   * 获取交易所支持的交易对列表
+   */
+  async getMarkets(
+    masterPassword: string,
+    exchangeId: string
+  ): Promise<Market[]> {
+    const exchange = await this.getExchange(masterPassword, exchangeId);
+    return Object.values(exchange.markets);
+  }
+
+  /**
+   * 检测 API Key 权限
+   */
+  async detectPermissions(
+    masterPassword: string,
+    exchangeId: string,
+    label?: string
+  ): Promise<string[]> {
+    const exchange = await this.getExchange(masterPassword, exchangeId, label);
+    const permissions: string[] = [];
+
+    // 尝试读取余额 → 说明有读权限
+    try {
+      await exchange.fetchBalance();
+      permissions.push('read');
+    } catch { /* no read permission */ }
+
+    // 尝试查看挂单 → 说明有交易读权限
+    try {
+      await exchange.fetchOpenOrders();
+      permissions.push('spot');
+    } catch { /* no spot permission */ }
+
+    return permissions;
+  }
+
+  /**
+   * 列出所有已配置的交易所
+   */
+  async listConfiguredExchanges(masterPassword: string): Promise<
+    { exchangeId: string; label: string; id: string }[]
+  > {
+    const credentials = await this.vault.listCredentials(masterPassword);
+    return credentials.map(c => ({
+      exchangeId: c.exchangeId,
+      label: c.label,
+      id: c.id,
+    }));
+  }
+
+  /**
+   * 清理连接缓存
+   */
+  clearCache(): void {
+    this.instances.clear();
+  }
+
+  // ─── 内部方法 ───
+
+  private createInstance(cred: ExchangeCredential): Exchange {
+    const ExchangeClass = (ccxt as any)[cred.exchangeId];
+    if (!ExchangeClass) {
+      throw new Error(`不支持的交易所: ${cred.exchangeId}`);
+    }
+
+    const config: any = {
+      apiKey: cred.apiKey,
+      secret: cred.secret,
+      enableRateLimit: true,
+      timeout: 30_000,
+    };
+
+    if (cred.passphrase) {
+      config.password = cred.passphrase;
+    }
+
+    return new ExchangeClass(config);
+  }
+
+  /**
+   * 获取持仓币种的 USD 价格
+   */
+  private async getUSDPrices(
+    exchange: Exchange,
+    balance: Balances
+  ): Promise<Record<string, number>> {
+    const prices: Record<string, number> = {};
+    const stablecoins = new Set(['USDT', 'USDC', 'BUSD', 'DAI', 'TUSD', 'FDUSD']);
+
+    const totalBal2 = balance.total as unknown as Record<string, number>;
+    const coins = Object.keys(totalBal2).filter(
+      coin => (totalBal2[coin] ?? 0) > 0 && !stablecoins.has(coin)
+    );
+
+    // 批量获取行情
+    const symbols = coins
+      .map(coin => `${coin}/USDT`)
+      .filter(sym => exchange.markets[sym]);
+
+    if (symbols.length > 0) {
+      try {
+        const tickers = await exchange.fetchTickers(symbols);
+        for (const [sym, ticker] of Object.entries(tickers)) {
+          const coin = sym.split('/')[0];
+          if (ticker.last) {
+            prices[coin] = ticker.last;
+          }
+        }
+      } catch {
+        // 如果批量获取失败，逐个获取
+        for (const sym of symbols) {
+          try {
+            const ticker = await exchange.fetchTicker(sym);
+            const coin = sym.split('/')[0];
+            if (ticker.last) prices[coin] = ticker.last;
+          } catch { /* skip */ }
+        }
+      }
+    }
+
+    return prices;
+  }
+}
