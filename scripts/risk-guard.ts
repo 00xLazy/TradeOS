@@ -110,7 +110,8 @@ export class RiskGuard {
       const elapsed = (Date.now() - lastTrade.timestamp) / 1000;
       if (elapsed < this.rules.cooldownSeconds) {
         const remaining = Math.ceil(this.rules.cooldownSeconds - elapsed);
-        warnings.push(`距离上次 ${request.symbol} 交易仅 ${Math.floor(elapsed)}s，冷却期剩余 ${remaining}s`);
+        reasons.push(`距离上次 ${request.symbol} 交易仅 ${Math.floor(elapsed)}s，冷却期剩余 ${remaining}s`);
+        blocked = true;
       }
     }
 

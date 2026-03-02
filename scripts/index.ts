@@ -28,6 +28,9 @@ const portfolioTracker = new PortfolioTracker(DATA_DIR, exchangeManager);
 const balanceMonitor = new BalanceMonitor(DATA_DIR, exchangeManager, portfolioTracker);
 const pnlTracker = new PnLTracker(DATA_DIR, portfolioTracker);
 
+// 注入 PnL 追踪器到订单执行器（避免循环依赖）
+orderExecutor.setPnLTracker(pnlTracker);
+
 // ─── 导出 ───
 
 export {

@@ -100,7 +100,7 @@ export class KeyVault {
     const credentials = await this.loadAll(masterPassword);
     this.cachedCredentials = credentials;
     this.cacheExpiry = Date.now() + this.cacheTTL;
-    return credentials;
+    return credentials.map(c => ({ ...c }));
   }
 
   /**

@@ -56,7 +56,7 @@ export class BalanceMonitor {
   private pollingMs: number;
   private exchangeManager: ExchangeManager;
   private portfolioTracker: PortfolioTracker;
-  private masterPassword: string = '';
+  private getPassword: (() => string) | null = null;
   private callbacks: AlertCallback[] = [];
   private lastBalances: Map<string, number> = new Map();  // coin -> total
 
@@ -77,10 +77,11 @@ export class BalanceMonitor {
 
   /**
    * 启动监控循环
+   * @param getPassword 返回主密码的函数，避免明文存储密码
    */
-  start(masterPassword: string): void {
+  start(getPassword: () => string): void {
     if (this.intervalId) return; // 已在运行
-    this.masterPassword = masterPassword;
+    this.getPassword = getPassword;
 
     this.intervalId = setInterval(() => {
       this.checkAllRules().catch(err =>
@@ -100,6 +101,7 @@ export class BalanceMonitor {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
+    this.getPassword = null;
   }
 
   /**
@@ -170,6 +172,8 @@ export class BalanceMonitor {
    * 检查所有启用的规则
    */
   async checkAllRules(): Promise<AlertEvent[]> {
+    if (!this.getPassword) return [];
+
     const events: AlertEvent[] = [];
     const enabledRules = this.rules.filter(r => r.enabled);
 
@@ -216,7 +220,7 @@ export class BalanceMonitor {
     if (!symbol || !exchange) return null;
 
     const ticker = await this.exchangeManager.getTicker(
-      this.masterPassword, exchange, symbol
+      this.getPassword!(), exchange, symbol
     );
 
     const triggered =
@@ -238,7 +242,7 @@ export class BalanceMonitor {
     const { coin, threshold } = rule.params;
     if (!coin) return null;
 
-    const { aggregated } = await this.exchangeManager.getAllBalances(this.masterPassword);
+    const { aggregated } = await this.exchangeManager.getAllBalances(this.getPassword!());
     const current = aggregated.find(a => a.coin === coin);
     const currentTotal = current?.total ?? 0;
 

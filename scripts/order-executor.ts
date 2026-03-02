@@ -8,6 +8,7 @@
 import type { Exchange, Order } from 'ccxt';
 import { ExchangeManager, type TickerInfo } from './exchange-manager.js';
 import { RiskGuard, type RiskCheckResult } from './risk-guard.js';
+import type { PnLTracker } from './pnl-tracker.js';
 
 // ─── 类型定义 ───
 
@@ -30,10 +31,10 @@ export interface OrderRequest {
 export interface OrderPreview {
   request: OrderRequest;
   currentPrice: number;
-  estimatedCost: number;     // 预估花费 (USDT)
+  estimatedValue: number;    // 预估金额：买入为花费，卖出为收入 (USDT)
   estimatedFee: number;      // 预估手续费
   riskCheck: RiskCheckResult;
-  warning?: string;
+  warnings: string[];
 }
 
 export interface OrderResult {
@@ -57,10 +58,18 @@ export interface OrderResult {
 export class OrderExecutor {
   private exchangeManager: ExchangeManager;
   private riskGuard: RiskGuard;
+  private pnlTracker: PnLTracker | null = null;
 
   constructor(exchangeManager: ExchangeManager, riskGuard: RiskGuard) {
     this.exchangeManager = exchangeManager;
     this.riskGuard = riskGuard;
+  }
+
+  /**
+   * 设置 PnL 追踪器（避免循环依赖，通过 setter 注入）
+   */
+  setPnLTracker(tracker: PnLTracker): void {
+    this.pnlTracker = tracker;
   }
 
   /**
@@ -76,28 +85,27 @@ export class OrderExecutor {
 
     const currentPrice = ticker.last;
     const price = request.type === 'market' ? currentPrice : (request.price ?? currentPrice);
-    const estimatedCost = request.amount * price;
-    const estimatedFee = estimatedCost * 0.001; // 默认 0.1% 手续费估算
+    const estimatedValue = request.amount * price;
+    const estimatedFee = estimatedValue * 0.001; // 默认 0.1% 手续费估算
 
     // 风控检查
-    const riskCheck = this.riskGuard.checkOrder(request, estimatedCost);
+    const riskCheck = this.riskGuard.checkOrder(request, estimatedValue);
 
-    let warning: string | undefined;
+    const warnings: string[] = [...riskCheck.warnings];
     if (request.market === 'futures' && request.leverage && request.leverage > 10) {
-      warning = `高杠杆警告：${request.leverage}x 杠杆交易风险极高，请确认你了解爆仓风险。`;
+      warnings.push(`高杠杆警告：${request.leverage}x 杠杆交易风险极高，请确认你了解爆仓风险。`);
     }
-    if (request.type === 'market' && estimatedCost > 10_000) {
-      warning = (warning ? warning + ' ' : '') +
-        `大额市价单警告：预估花费 $${estimatedCost.toFixed(2)}，市价单可能产生较大滑点。`;
+    if (request.type === 'market' && estimatedValue > 10_000) {
+      warnings.push(`大额市价单警告：预估金额 $${estimatedValue.toFixed(2)}，市价单可能产生较大滑点。`);
     }
 
     return {
       request,
       currentPrice,
-      estimatedCost,
+      estimatedValue,
       estimatedFee,
       riskCheck,
-      warning,
+      warnings,
     };
   }
 
@@ -194,7 +202,21 @@ export class OrderExecutor {
 
       // 记录到风控模块的日交易量
       const actualCost = order.cost ?? estimatedCost;
-      this.riskGuard.recordTrade(actualCost);
+      this.riskGuard.recordTrade(actualCost, request.symbol);
+
+      // 记录到 PnL 追踪器
+      if (this.pnlTracker) {
+        this.pnlTracker.recordTrade({
+          timestamp: order.timestamp ?? Date.now(),
+          exchange: request.exchange,
+          symbol: order.symbol,
+          side: request.side,
+          amount: order.filled ?? request.amount,
+          price: order.average ?? order.price ?? 0,
+          cost: order.cost ?? 0,
+          fee: order.fee?.cost ?? 0,
+        });
+      }
 
       return {
         success: true,
