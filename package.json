@@ -1,6 +1,6 @@
 {
   "name": "openclaw-skill-cex-trading",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "OpenClaw Skill - CEX Trading & Portfolio Monitor. Trade on 100+ exchanges via natural language, manage API keys securely, monitor balances and track PnL.",
   "type": "module",
   "scripts": {

@@ -13,6 +13,9 @@ import { RiskGuard } from './risk-guard.js';
 import { PortfolioTracker } from './portfolio-tracker.js';
 import { BalanceMonitor } from './balance-monitor.js';
 import { PnLTracker } from './pnl-tracker.js';
+import { DcaScheduler } from './dca-scheduler.js';
+import { ArbitrageScanner } from './arbitrage-scanner.js';
+import { FundingRateMonitor } from './funding-rate-monitor.js';
 
 // ─── 数据目录 ───
 
@@ -31,6 +34,11 @@ const pnlTracker = new PnLTracker(DATA_DIR, portfolioTracker);
 // 注入 PnL 追踪器到订单执行器（避免循环依赖）
 orderExecutor.setPnLTracker(pnlTracker);
 
+// v0.3.0 新增模块
+const dcaScheduler = new DcaScheduler(DATA_DIR, exchangeManager, orderExecutor);
+const arbitrageScanner = new ArbitrageScanner(DATA_DIR, exchangeManager);
+const fundingRateMonitor = new FundingRateMonitor(DATA_DIR, exchangeManager);
+
 // ─── 导出 ───
 
 export {
@@ -41,6 +49,9 @@ export {
   portfolioTracker,
   balanceMonitor,
   pnlTracker,
+  dcaScheduler,
+  arbitrageScanner,
+  fundingRateMonitor,
   SUPPORTED_EXCHANGES,
   DATA_DIR,
 };
@@ -53,3 +64,6 @@ export type { RiskRules, RiskCheckResult } from './risk-guard.js';
 export type { PortfolioSnapshot, PortfolioDiff, NetValuePoint } from './portfolio-tracker.js';
 export type { AlertRule, AlertEvent, AlertType } from './balance-monitor.js';
 export type { PnLReport, TradeStats } from './pnl-tracker.js';
+export type { DcaPlan, DcaExecutionRecord, DcaPlanSummary, DcaEvent, DcaFrequency } from './dca-scheduler.js';
+export type { ArbitrageConfig, ArbitrageOpportunity, ArbitrageAlert } from './arbitrage-scanner.js';
+export type { FundingRateConfig, FundingRateInfo, FundingRateOpportunity, FundingRateAlert } from './funding-rate-monitor.js';

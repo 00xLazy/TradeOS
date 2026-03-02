@@ -1,7 +1,7 @@
 ---
 name: cex-trading
 description: 中心化交易所交易与资产管理。通过自然语言在 Binance、OKX、Bybit 等 100+ 交易所下单交易，监控账户余额，追踪损益。
-version: 0.2.0
+version: 0.3.0
 author: 00xLazy
 permissions:
   - filesystem
@@ -12,6 +12,9 @@ tags:
   - exchange
   - portfolio
   - defi
+  - dca
+  - arbitrage
+  - funding-rate
 ---
 
 # CEX Trading — 交易所交易与资产管理
@@ -28,6 +31,9 @@ tags:
 - 多交易所资产总览与聚合
 - 余额变动告警、价格告警、跌幅告警
 - 日 / 周 / 月损益报告
+- DCA 定投策略（按小时/日/周/月自动定投）
+- 跨所套利机会扫描与告警
+- 永续合约资金费率监控与套利提醒
 
 ## 2. When to use
 
@@ -41,7 +47,11 @@ tags:
 - 用户想设置价格告警或余额监控
 - 用户想查看收益报告（日/周/月）
 - 用户想了解某个币的当前价格
-- 用户提到"交易"、"下单"、"买入"、"卖出"、"余额"、"持仓"、"资产"、"盈亏"等关键词
+- 用户想设置定投计划（DCA）
+- 用户想查看、暂停或删除定投计划
+- 用户想监控跨交易所的套利机会
+- 用户想查看资金费率或费率套利机会
+- 用户提到"交易"、"下单"、"买入"、"卖出"、"余额"、"持仓"、"资产"、"盈亏"、"定投"、"套利"、"费率"等关键词
 
 ## 3. How to use
 
@@ -219,6 +229,131 @@ BTC/USDT (Binance)
 24h 成交量: 12,345 BTC
 ```
 
+### 3.8 DCA 定投
+
+**创建定投计划：**
+```
+调用 dcaScheduler.createPlan({
+  name: '每日定投 BTC',
+  exchangeId: 'binance',
+  symbol: 'BTC/USDT',
+  amountUSDT: 100,
+  frequency: 'daily',        // 'hourly' | 'daily' | 'weekly' | 'monthly'
+  executionTime: 9            // daily: 0-23小时; weekly: 0-6星期几; monthly: 1-28日
+})
+```
+
+**启动/停止定投调度器：**
+```
+dcaScheduler.start(getPassword)   // 启动（30s 轮询检查执行时间）
+dcaScheduler.stop()               // 停止
+```
+
+**管理计划：**
+```
+dcaScheduler.listPlans()                          // 列出所有计划
+dcaScheduler.pausePlan(planId)                     // 暂停
+dcaScheduler.resumePlan(planId)                    // 恢复
+dcaScheduler.removePlan(planId)                    // 删除
+dcaScheduler.getPlanSummary(masterPassword, planId) // 摘要含盈亏
+dcaScheduler.getExecutionHistory(planId, 20)       // 执行历史
+```
+
+**显示格式示例：**
+```
+定投计划: 每日定投 BTC
+──────────────
+交易所: Binance | 交易对: BTC/USDT
+金额: $100/天 | 下次执行: 明天 09:00
+累计投入: $3,000 | 累计买入: 0.035 BTC
+均价: $85,714 | 现价: $87,200
+未实现盈亏: +$52 (+1.73%)
+```
+
+**重要说明：**
+- DCA 在创建计划时即视为用户已授权，执行时自动走 previewOrder → executeOrder 流程，不需要每次确认
+- 风控模块仍然生效，若被拦截则记录失败，不重试
+- 注册 `dcaScheduler.onEvent(callback)` 可接收执行结果通知
+
+### 3.9 跨所套利监控
+
+**启动套利扫描：**
+```
+arbitrageScanner.start(getPassword)   // 启动（30s 轮询）
+arbitrageScanner.stop()               // 停止
+```
+
+**配置监控：**
+```
+arbitrageScanner.updateConfig({
+  symbols: ['BTC/USDT', 'ETH/USDT', 'SOL/USDT'],
+  exchanges: ['binance', 'okx', 'bybit'],
+  minProfitPercent: 0.5,   // 净利润率阈值 (扣除双边手续费)
+  feePercent: 0.1           // 单边手续费估算
+})
+arbitrageScanner.addSymbol('DOGE/USDT')   // 添加监控
+arbitrageScanner.removeSymbol('SOL/USDT') // 移除监控
+```
+
+**手动扫描：**
+```
+const opportunities = await arbitrageScanner.scanNow(masterPassword)
+```
+
+**告警格式示例：**
+```
+套利机会：BTC 在 OKX 买入 $84,200，在 Binance 卖出 $84,650，净利润 0.33%
+```
+
+**重要说明：**
+- 仅提醒，不自动交易
+- 使用 ask/bid 价格（非 last）确保更贴近实际可执行价
+- 注册 `arbitrageScanner.onAlert(callback)` 接收告警
+
+### 3.10 资金费率监控
+
+**启动费率监控：**
+```
+fundingRateMonitor.start(getPassword)   // 启动（5 分钟轮询）
+fundingRateMonitor.stop()               // 停止
+```
+
+**配置监控：**
+```
+fundingRateMonitor.updateConfig({
+  symbols: ['BTC/USDT:USDT', 'ETH/USDT:USDT'],
+  exchanges: ['binance', 'okx', 'bybit'],
+  annualizedThreshold: 30    // 年化超过 30% 时告警
+})
+fundingRateMonitor.addSymbol('SOL/USDT:USDT')    // 添加
+fundingRateMonitor.removeSymbol('ETH/USDT:USDT') // 移除
+```
+
+**查询当前费率：**
+```
+const rates = await fundingRateMonitor.fetchCurrentRates(masterPassword)
+```
+
+**手动扫描套利机会：**
+```
+const opportunities = await fundingRateMonitor.scanNow(masterPassword)
+```
+
+**显示格式示例：**
+```
+BTC/USDT:USDT (Binance)
+当前费率: 0.0350% (每 8h)
+年化: 38.3%
+方向: 正费率 → 建议做空收取费率
+下次结算: 2 小时 15 分钟后
+```
+
+**重要说明：**
+- 仅提醒，不自动交易
+- 永续合约符号格式为 `BTC/USDT:USDT`（CCXT 标准）
+- 正费率 → 多头付给空头，建议做空收取；负费率 → 反之
+- 注册 `fundingRateMonitor.onAlert(callback)` 接收告警
+
 ## 4. Risk & Safety
 
 - 所有 API Key 使用 AES-256-GCM 加密，存储在本地 `~/.openclaw/skills/cex-trading/vault/`
@@ -239,6 +374,13 @@ BTC/USDT (Binance)
 │   └── trades.db             # 交易记录 (SQLite)
 ├── alerts/
 │   └── rules.json            # 告警规则配置
+├── dca/
+│   ├── plans.json            # 定投计划配置
+│   └── history.json          # 定投执行历史
+├── arbitrage/
+│   └── config.json           # 套利扫描配置
+├── funding/
+│   └── config.json           # 资金费率监控配置
 └── risk-rules.json           # 风控规则配置
 ```
 
