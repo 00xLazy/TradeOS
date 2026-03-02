@@ -5,6 +5,7 @@
  * 所有交易必须经过风控检查和用户二次确认。
  */
 
+import crypto from 'node:crypto';
 import type { Exchange, Order } from 'ccxt';
 import { ExchangeManager, type TickerInfo } from './exchange-manager.js';
 import { RiskGuard, type RiskCheckResult } from './risk-guard.js';
@@ -35,6 +36,7 @@ export interface OrderPreview {
   estimatedFee: number;      // 预估手续费
   riskCheck: RiskCheckResult;
   warnings: string[];
+  confirmationToken: string; // 一次性确认 token，执行时必须传入
 }
 
 export interface OrderResult {
@@ -55,10 +57,20 @@ export interface OrderResult {
 
 // ─── OrderExecutor 类 ───
 
+// 确认 token 有效期 (5 分钟)
+const TOKEN_TTL_MS = 5 * 60 * 1000;
+
+interface PendingConfirmation {
+  token: string;
+  request: OrderRequest;
+  expiresAt: number;
+}
+
 export class OrderExecutor {
   private exchangeManager: ExchangeManager;
   private riskGuard: RiskGuard;
   private pnlTracker: PnLTracker | null = null;
+  private pendingConfirmations: Map<string, PendingConfirmation> = new Map();
 
   constructor(exchangeManager: ExchangeManager, riskGuard: RiskGuard) {
     this.exchangeManager = exchangeManager;
@@ -99,6 +111,15 @@ export class OrderExecutor {
       warnings.push(`大额市价单警告：预估金额 $${estimatedValue.toFixed(2)}，市价单可能产生较大滑点。`);
     }
 
+    // 生成一次性确认 token
+    const confirmationToken = crypto.randomBytes(32).toString('hex');
+    this.pendingConfirmations.set(confirmationToken, {
+      token: confirmationToken,
+      request,
+      expiresAt: Date.now() + TOKEN_TTL_MS,
+    });
+    this.cleanExpiredTokens();
+
     return {
       request,
       currentPrice,
@@ -106,16 +127,57 @@ export class OrderExecutor {
       estimatedFee,
       riskCheck,
       warnings,
+      confirmationToken,
     };
   }
 
   /**
    * 执行订单（需在 previewOrder 后、用户确认后调用）
+   * @param confirmationToken previewOrder 返回的一次性确认 token
    */
   async executeOrder(
     masterPassword: string,
-    request: OrderRequest
+    confirmationToken: string
   ): Promise<OrderResult> {
+    // 验证确认 token
+    const pending = this.pendingConfirmations.get(confirmationToken);
+    if (!pending) {
+      return {
+        success: false,
+        symbol: '',
+        side: 'buy',
+        type: 'market',
+        amount: 0,
+        price: 0,
+        cost: 0,
+        fee: 0,
+        status: 'rejected',
+        timestamp: Date.now(),
+        error: '无效的确认 token。请先调用 previewOrder 获取订单预览。',
+      };
+    }
+
+    if (Date.now() > pending.expiresAt) {
+      this.pendingConfirmations.delete(confirmationToken);
+      return {
+        success: false,
+        symbol: pending.request.symbol,
+        side: pending.request.side,
+        type: pending.request.type,
+        amount: pending.request.amount,
+        price: 0,
+        cost: 0,
+        fee: 0,
+        status: 'rejected',
+        timestamp: Date.now(),
+        error: '确认 token 已过期（5 分钟），请重新预览订单。',
+      };
+    }
+
+    // 消费 token（一次性）
+    this.pendingConfirmations.delete(confirmationToken);
+    const request = pending.request;
+
     // 再次进行风控检查
     const ticker = await this.exchangeManager.getTicker(
       masterPassword, request.exchange, request.symbol
@@ -244,7 +306,7 @@ export class OrderExecutor {
         fee: 0,
         status: 'error',
         timestamp: Date.now(),
-        error: err.message ?? String(err),
+        error: OrderExecutor.sanitizeError(err),
       };
     }
   }
@@ -263,7 +325,7 @@ export class OrderExecutor {
       await exchange.cancelOrder(orderId, symbol);
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err.message ?? String(err) };
+      return { success: false, error: OrderExecutor.sanitizeError(err) };
     }
   }
 
@@ -293,6 +355,33 @@ export class OrderExecutor {
   }
 
   // ─── 内部方法 ───
+
+  private cleanExpiredTokens(): void {
+    const now = Date.now();
+    for (const [token, pending] of this.pendingConfirmations) {
+      if (now > pending.expiresAt) {
+        this.pendingConfirmations.delete(token);
+      }
+    }
+  }
+
+  /**
+   * 过滤错误信息中的敏感内容（API Key、Secret、签名等）
+   */
+  static sanitizeError(err: any): string {
+    let msg = err.message ?? String(err);
+    // 移除可能的 API Key（通常为 16-64 位字母数字）
+    msg = msg.replace(/[A-Za-z0-9]{16,64}/g, (match: string) => {
+      // 保留常见的非敏感长字符串（如 URL path、hash 等）
+      if (/^(https?|wss?|ftp)/i.test(match)) return match;
+      return match.slice(0, 4) + '***';
+    });
+    // 移除可能的签名
+    msg = msg.replace(/signature[=:]\s*[^\s&'",}]+/gi, 'signature=***');
+    // 移除可能的 secret
+    msg = msg.replace(/secret[=:]\s*[^\s&'",}]+/gi, 'secret=***');
+    return msg;
+  }
 
   private async setLeverage(
     exchange: Exchange,

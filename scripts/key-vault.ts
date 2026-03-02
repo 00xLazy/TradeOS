@@ -39,11 +39,12 @@ interface VaultFile {
 
 // ─── 常量 ───
 
-const VAULT_VERSION = 1;
+const VAULT_VERSION = 2;
 const PBKDF2_ITERATIONS = 600_000;  // OWASP 2024 推荐值
 const KEY_LENGTH = 32;               // AES-256
 const SALT_LENGTH = 32;
-const IV_LENGTH = 16;
+const IV_LENGTH = 12;                // NIST SP 800-38D 推荐的 GCM IV 长度
+const IV_LENGTH_V1 = 16;             // v1 版本使用的 IV 长度（兼容解密）
 
 // ─── KeyVault 类 ───
 
@@ -61,17 +62,27 @@ export class KeyVault {
 
   /**
    * 添加交易所凭证
+   * @returns 凭证对象和是否需要权限验证的标志
    */
   async addCredential(
     masterPassword: string,
     credential: Omit<ExchangeCredential, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<ExchangeCredential> {
-    // 安全检查：拒绝含提现权限的 Key
+    // 安全检查：拒绝含提现权限的 Key（声明层面）
     if (credential.permissions.includes('withdraw')) {
       throw new Error(
         'SECURITY: 拒绝存储含提现(withdraw)权限的 API Key。' +
         '请在交易所后台创建仅含交易权限的 Key。'
       );
+    }
+
+    // 安全检查：拒绝空 API Key 或 Secret
+    if (!credential.apiKey || !credential.secret) {
+      throw new Error('API Key 和 Secret 不能为空。');
+    }
+
+    if (credential.apiKey.length < 10 || credential.secret.length < 10) {
+      throw new Error('API Key 或 Secret 长度异常，请检查是否完整。');
     }
 
     const fullCredential: ExchangeCredential = {
@@ -213,6 +224,7 @@ export class KeyVault {
       masterPassword, salt, PBKDF2_ITERATIONS, KEY_LENGTH, 'sha512'
     );
     const iv = Buffer.from(payload.iv, 'hex');
+    // 兼容 v1（16字节IV）和 v2（12字节IV），根据实际 IV 长度自动适配
     const tag = Buffer.from(payload.tag, 'hex');
     const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
     decipher.setAuthTag(tag);
@@ -232,6 +244,13 @@ export class KeyVault {
     const raw = fs.readFileSync(this.vaultPath, 'utf8');
     const vault: VaultFile = JSON.parse(raw);
 
+    if (vault.version >= 2 && vault.credentials.length === 1) {
+      // v2: 所有凭证作为一个整体加密
+      const json = this.decrypt(vault.credentials[0], masterPassword);
+      return JSON.parse(json) as ExchangeCredential[];
+    }
+
+    // v1 兼容：每个凭证单独加密
     return vault.credentials.map(enc => {
       const json = this.decrypt(enc, masterPassword);
       return JSON.parse(json) as ExchangeCredential;
@@ -247,16 +266,18 @@ export class KeyVault {
       fs.mkdirSync(dir, { recursive: true });
     }
 
+    // 将所有凭证作为一个整体加密（单次 PBKDF2），而非逐个加密
     const vault: VaultFile = {
       version: VAULT_VERSION,
-      credentials: credentials.map(cred =>
-        this.encrypt(JSON.stringify(cred), masterPassword)
-      ),
+      credentials: [
+        this.encrypt(JSON.stringify(credentials), masterPassword)
+      ],
     };
 
     // 写入临时文件再 rename，防止写入中断导致数据损坏
     const tmpPath = this.vaultPath + '.tmp';
     fs.writeFileSync(tmpPath, JSON.stringify(vault, null, 2), 'utf8');
+    fs.chmodSync(tmpPath, 0o600);
     fs.renameSync(tmpPath, this.vaultPath);
 
     // 设置文件权限为 600（仅 owner 可读写）

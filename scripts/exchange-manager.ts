@@ -54,11 +54,19 @@ export interface TickerInfo {
   timestamp: number;
 }
 
+// 交易所实例缓存 TTL (10 分钟)
+const INSTANCE_TTL_MS = 10 * 60 * 1000;
+
+interface CachedExchange {
+  instance: Exchange;
+  expiresAt: number;
+}
+
 // ─── ExchangeManager 类 ───
 
 export class ExchangeManager {
   private vault: KeyVault;
-  private instances: Map<string, Exchange> = new Map();
+  private instances: Map<string, CachedExchange> = new Map();
 
   constructor(vault: KeyVault) {
     this.vault = vault;
@@ -74,7 +82,14 @@ export class ExchangeManager {
   ): Promise<Exchange> {
     const cacheKey = `${exchangeId}:${label ?? 'default'}`;
     const cached = this.instances.get(cacheKey);
-    if (cached) return cached;
+    if (cached && Date.now() < cached.expiresAt) {
+      return cached.instance;
+    }
+
+    // 缓存过期则移除
+    if (cached) {
+      this.instances.delete(cacheKey);
+    }
 
     const cred = await this.vault.getCredential(masterPassword, exchangeId, label);
     if (!cred) {
@@ -83,7 +98,11 @@ export class ExchangeManager {
 
     const exchange = this.createInstance(cred);
     await exchange.loadMarkets();
-    this.instances.set(cacheKey, exchange);
+    this.instances.set(cacheKey, {
+      instance: exchange,
+      expiresAt: Date.now() + INSTANCE_TTL_MS,
+    });
+    this.cleanExpiredInstances();
     return exchange;
   }
 
@@ -216,15 +235,16 @@ export class ExchangeManager {
   }
 
   /**
-   * 检测 API Key 权限
+   * 检测 API Key 权限（通过实际 API 调用验证）
    */
   async detectPermissions(
     masterPassword: string,
     exchangeId: string,
     label?: string
-  ): Promise<string[]> {
+  ): Promise<{ permissions: string[]; hasWithdraw: boolean }> {
     const exchange = await this.getExchange(masterPassword, exchangeId, label);
     const permissions: string[] = [];
+    let hasWithdraw = false;
 
     // 尝试读取余额 → 说明有读权限
     try {
@@ -238,7 +258,38 @@ export class ExchangeManager {
       permissions.push('spot');
     } catch { /* no spot permission */ }
 
-    return permissions;
+    // 检测提现权限：通过交易所 API 返回的权限信息
+    try {
+      if (typeof (exchange as any).fetchApiPermissions === 'function') {
+        const apiPerms = await (exchange as any).fetchApiPermissions();
+        if (apiPerms) {
+          // Binance 风格：enableWithdrawals
+          if (apiPerms.enableWithdrawals || apiPerms.withdraw || apiPerms.enableInternalTransfer) {
+            hasWithdraw = true;
+          }
+          // 通用检测：遍历权限对象查找 withdraw 相关字段
+          const permStr = JSON.stringify(apiPerms).toLowerCase();
+          if (permStr.includes('"withdraw":true') || permStr.includes('"enablewithdrawals":true')) {
+            hasWithdraw = true;
+          }
+        }
+      }
+    } catch { /* 交易所不支持此 API */ }
+
+    // 备用检测：尝试调用获取充提历史（如果成功则可能有提现权限）
+    if (!hasWithdraw) {
+      try {
+        if (typeof exchange.fetchWithdrawals === 'function') {
+          await exchange.fetchWithdrawals(undefined, undefined, 1);
+          // 如果能成功获取提现历史，说明至少有读取提现记录的权限
+          hasWithdraw = true;
+        }
+      } catch {
+        // 无权限或交易所不支持，视为安全
+      }
+    }
+
+    return { permissions, hasWithdraw };
   }
 
   /**
@@ -264,7 +315,23 @@ export class ExchangeManager {
 
   // ─── 内部方法 ───
 
+  private cleanExpiredInstances(): void {
+    const now = Date.now();
+    for (const [key, cached] of this.instances) {
+      if (now > cached.expiresAt) {
+        this.instances.delete(key);
+      }
+    }
+  }
+
   private createInstance(cred: ExchangeCredential): Exchange {
+    // 白名单校验：防止通过原型链属性访问等攻击
+    if (!SUPPORTED_EXCHANGES.includes(cred.exchangeId as SupportedExchangeId)) {
+      throw new Error(
+        `不支持的交易所: ${cred.exchangeId}。支持的交易所: ${SUPPORTED_EXCHANGES.join(', ')}`
+      );
+    }
+
     const ExchangeClass = (ccxt as any)[cred.exchangeId];
     if (!ExchangeClass) {
       throw new Error(`不支持的交易所: ${cred.exchangeId}`);

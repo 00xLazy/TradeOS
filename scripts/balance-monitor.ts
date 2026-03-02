@@ -334,5 +334,6 @@ export class BalanceMonitor {
       fs.mkdirSync(dir, { recursive: true });
     }
     fs.writeFileSync(this.configPath, JSON.stringify(this.rules, null, 2), 'utf8');
+    fs.chmodSync(this.configPath, 0o600);
   }
 }

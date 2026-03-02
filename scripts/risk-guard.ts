@@ -53,10 +53,13 @@ export class RiskGuard {
   private rules: RiskRules;
   private todayTrades: TradeRecord[] = [];
   private configPath: string;
+  private tradesPath: string;
 
   constructor(dataDir: string, customRules?: Partial<RiskRules>) {
     this.configPath = path.join(dataDir, 'risk-rules.json');
+    this.tradesPath = path.join(dataDir, 'daily-trades.json');
     this.rules = { ...DEFAULT_RULES, ...this.loadRules(), ...customRules };
+    this.loadTrades();
   }
 
   /**
@@ -145,6 +148,7 @@ export class RiskGuard {
       timestamp: Date.now(),
     });
     this.cleanOldTrades();
+    this.saveTrades();
   }
 
   /**
@@ -209,5 +213,27 @@ export class RiskGuard {
       fs.mkdirSync(dir, { recursive: true });
     }
     fs.writeFileSync(this.configPath, JSON.stringify(this.rules, null, 2), 'utf8');
+    fs.chmodSync(this.configPath, 0o600);
+  }
+
+  private loadTrades(): void {
+    try {
+      if (fs.existsSync(this.tradesPath)) {
+        const raw = JSON.parse(fs.readFileSync(this.tradesPath, 'utf8'));
+        if (Array.isArray(raw)) {
+          this.todayTrades = raw;
+          this.cleanOldTrades();
+        }
+      }
+    } catch { /* start fresh */ }
+  }
+
+  private saveTrades(): void {
+    const dir = path.dirname(this.tradesPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(this.tradesPath, JSON.stringify(this.todayTrades), 'utf8');
+    fs.chmodSync(this.tradesPath, 0o600);
   }
 }

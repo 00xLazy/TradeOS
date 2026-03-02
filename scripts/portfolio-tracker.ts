@@ -56,6 +56,9 @@ export class PortfolioTracker {
 
     this.db = new Database(path.join(dbDir, 'portfolio.db'));
     this.initDB();
+
+    // 设置数据库文件权限为 600（仅 owner 可读写）
+    fs.chmodSync(path.join(dbDir, 'portfolio.db'), 0o600);
   }
 
   /**
@@ -106,8 +109,12 @@ export class PortfolioTracker {
    * 对比两个时间点的资产变化
    */
   getDiff(startTime: number, endTime: number): PortfolioDiff | null {
-    const startSnap = this.getClosestSnapshot(startTime);
-    const endSnap = this.getClosestSnapshot(endTime);
+    // 最大偏差为查询周期的 20%，但至少 1 小时
+    const period = endTime - startTime;
+    const maxDeviation = Math.max(period * 0.2, 60 * 60 * 1000);
+
+    const startSnap = this.getClosestSnapshot(startTime, maxDeviation);
+    const endSnap = this.getClosestSnapshot(endTime, maxDeviation);
 
     if (!startSnap || !endSnap) return null;
 
@@ -207,12 +214,19 @@ export class PortfolioTracker {
     );
   }
 
-  private getClosestSnapshot(targetTime: number): PortfolioSnapshot | null {
+  private getClosestSnapshot(targetTime: number, maxDeviationMs?: number): PortfolioSnapshot | null {
     const row = this.db.prepare(
       'SELECT * FROM snapshots ORDER BY ABS(timestamp - ?) ASC LIMIT 1'
     ).get(targetTime) as any;
 
     if (!row) return null;
+
+    // 如果指定了最大偏差，检查快照时间是否在可接受范围内
+    if (maxDeviationMs !== undefined) {
+      const deviation = Math.abs(row.timestamp - targetTime);
+      if (deviation > maxDeviationMs) return null;
+    }
+
     return this.rowToSnapshot(row);
   }
 
