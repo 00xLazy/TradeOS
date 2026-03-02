@@ -121,8 +121,9 @@ export class ArbitrageScanner {
 
     // 如果更新了轮询间隔且正在运行，重启
     if (updates.pollingMs && this.timeoutId && this.getPassword) {
+      const getPassword = this.getPassword;
       this.stop();
-      this.start(this.getPassword);
+      this.start(getPassword);
     }
   }
 

@@ -58,7 +58,7 @@ export class RiskGuard {
   constructor(dataDir: string, customRules?: Partial<RiskRules>) {
     this.configPath = path.join(dataDir, 'risk-rules.json');
     this.tradesPath = path.join(dataDir, 'daily-trades.json');
-    this.rules = { ...DEFAULT_RULES, ...this.loadRules(), ...customRules };
+    this.rules = this.normalizeRules({ ...DEFAULT_RULES, ...this.loadRules(), ...customRules });
     this.loadTrades();
   }
 
@@ -194,7 +194,7 @@ export class RiskGuard {
    * 更新风控规则
    */
   updateRules(updates: Partial<RiskRules>): void {
-    this.rules = { ...this.rules, ...updates };
+    this.rules = this.normalizeRules({ ...this.rules, ...updates });
     this.saveRules();
   }
 
@@ -202,7 +202,7 @@ export class RiskGuard {
    * 重置为默认规则
    */
   resetRules(): void {
-    this.rules = { ...DEFAULT_RULES };
+    this.rules = this.normalizeRules({ ...DEFAULT_RULES });
     this.saveRules();
   }
 
@@ -259,5 +259,20 @@ export class RiskGuard {
     }
     fs.writeFileSync(this.tradesPath, JSON.stringify(this.todayTrades), 'utf8');
     fs.chmodSync(this.tradesPath, 0o600);
+  }
+
+  private normalizeRules(rules: RiskRules): RiskRules {
+    const blockedSymbols = Array.isArray(rules.blockedSymbols)
+      ? Array.from(new Set(
+        rules.blockedSymbols
+          .map(s => s.toUpperCase().trim())
+          .filter(Boolean)
+      ))
+      : [];
+
+    return {
+      ...rules,
+      blockedSymbols,
+    };
   }
 }

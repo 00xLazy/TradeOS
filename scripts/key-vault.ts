@@ -152,6 +152,22 @@ export class KeyVault {
     if (updates.permissions?.includes('withdraw')) {
       throw new Error('SECURITY: 拒绝含提现(withdraw)权限的 API Key。');
     }
+    if (updates.apiKey !== undefined) {
+      if (!updates.apiKey) {
+        throw new Error('API Key 不能为空。');
+      }
+      if (updates.apiKey.length < 10) {
+        throw new Error('API Key 长度异常，请检查是否完整。');
+      }
+    }
+    if (updates.secret !== undefined) {
+      if (!updates.secret) {
+        throw new Error('Secret 不能为空。');
+      }
+      if (updates.secret.length < 10) {
+        throw new Error('Secret 长度异常，请检查是否完整。');
+      }
+    }
 
     const credentials = await this.loadAll(masterPassword);
     const index = credentials.findIndex(c => c.id === credentialId);

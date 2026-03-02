@@ -460,12 +460,11 @@ export class DcaScheduler {
       case 'weekly': {
         const next = new Date(now);
         next.setHours(12, 0, 0, 0); // 中午 12 点执行
-        const daysUntil = (executionTime - next.getDay() + 7) % 7 || 7;
-        next.setDate(next.getDate() + daysUntil);
-        // 如果今天就是目标日且还没到执行时间
-        if (next.getDay() === executionTime && now.getHours() < 12) {
-          next.setDate(next.getDate() - 7 + daysUntil);
+        let daysUntil = (executionTime - next.getDay() + 7) % 7;
+        if (daysUntil === 0 && next.getTime() <= now.getTime()) {
+          daysUntil = 7;
         }
+        next.setDate(next.getDate() + daysUntil);
         return next.getTime();
       }
 

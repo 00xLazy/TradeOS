@@ -42,6 +42,12 @@ export interface ExchangeBalance {
   timestamp: number;
 }
 
+export interface BalanceFetchFailure {
+  exchangeId: string;
+  label: string;
+  error: string;
+}
+
 export interface TickerInfo {
   symbol: string;
   last: number;
@@ -159,10 +165,12 @@ export class ExchangeManager {
     exchanges: ExchangeBalance[];
     totalUSD: number;
     aggregated: FormattedBalance[];
+    failedExchanges: BalanceFetchFailure[];
   }> {
     const credentials = await this.vault.listCredentials(masterPassword);
     const exchanges: ExchangeBalance[] = [];
     const coinMap: Map<string, FormattedBalance> = new Map();
+    const failedExchanges: BalanceFetchFailure[] = [];
     let totalUSD = 0;
 
     // 并行查询所有交易所
@@ -172,7 +180,9 @@ export class ExchangeManager {
       )
     );
 
-    for (const result of results) {
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      const cred = credentials[i];
       if (result.status === 'fulfilled') {
         const eb = result.value;
         exchanges.push(eb);
@@ -190,13 +200,20 @@ export class ExchangeManager {
             coinMap.set(b.coin, { ...b });
           }
         }
+      } else {
+        const message = result.reason?.message ?? String(result.reason);
+        failedExchanges.push({
+          exchangeId: cred.exchangeId,
+          label: cred.label,
+          error: message,
+        });
       }
     }
 
     const aggregated = Array.from(coinMap.values())
       .sort((a, b) => b.valueUSD - a.valueUSD);
 
-    return { exchanges, totalUSD, aggregated };
+    return { exchanges, totalUSD, aggregated, failedExchanges };
   }
 
   /**
