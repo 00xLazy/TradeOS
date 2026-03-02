@@ -13,7 +13,7 @@ Trade on 100+ cryptocurrency exchanges via natural language. Manage API keys sec
 ### Secure API Key Management
 - AES-256-GCM encryption with PBKDF2-derived keys (600K iterations)
 - Automatically rejects API keys with withdrawal permissions
-- Credentials stored locally at `~/.openclaw/skills/cex-trading/vault/`
+- Credentials stored locally at `~/.openclaw/skills/TradeOS/vault/`
 - API keys are always masked in logs and chat messages
 
 ### Multi-Exchange Trading
@@ -130,10 +130,10 @@ Since TradeOS is built on CCXT, any of the 100+ supported exchanges can be added
 
 ```bash
 # Clone the repository
-git clone https://github.com/00xLazy/TradeOS.git ~/.openclaw/skills/cex-trading
+git clone https://github.com/00xLazy/TradeOS.git ~/.openclaw/skills/TradeOS
 
 # Install dependencies
-cd ~/.openclaw/skills/cex-trading
+cd ~/.openclaw/skills/TradeOS
 npm install
 ```
 
@@ -326,7 +326,7 @@ Agent:
 ## Project Structure
 
 ```
-cex-trading/
+TradeOS/
 ├── SKILL.md                         # OpenClaw skill descriptor
 ├── package.json                     # Dependencies (ccxt, better-sqlite3)
 ├── tsconfig.json
@@ -372,7 +372,7 @@ cex-trading/
 All data is stored locally on your machine:
 
 ```
-~/.openclaw/skills/cex-trading/
+~/.openclaw/skills/TradeOS/
 ├── vault/
 │   └── exchanges.enc.json    # Encrypted API keys
 ├── data/

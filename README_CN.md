@@ -13,7 +13,7 @@
 ### 安全的 API Key 管理
 - AES-256-GCM 加密，PBKDF2 密钥派生（60 万次迭代）
 - 自动拒绝含提现权限的 API Key
-- 凭证本地加密存储于 `~/.openclaw/skills/cex-trading/vault/`
+- 凭证本地加密存储于 `~/.openclaw/skills/TradeOS/vault/`
 - 日志和聊天消息中 API Key 自动脱敏显示
 
 ### 多交易所交易
@@ -130,10 +130,10 @@
 
 ```bash
 # 克隆仓库到 OpenClaw 技能目录
-git clone https://github.com/00xLazy/TradeOS.git ~/.openclaw/skills/cex-trading
+git clone https://github.com/00xLazy/TradeOS.git ~/.openclaw/skills/TradeOS
 
 # 安装依赖
-cd ~/.openclaw/skills/cex-trading
+cd ~/.openclaw/skills/TradeOS
 npm install
 ```
 
@@ -329,7 +329,7 @@ Agent:
 ## 项目结构
 
 ```
-cex-trading/
+TradeOS/
 ├── SKILL.md                         # OpenClaw 技能描述文件
 ├── package.json                     # 依赖 (ccxt, better-sqlite3)
 ├── tsconfig.json
@@ -375,7 +375,7 @@ cex-trading/
 所有数据存储在本地：
 
 ```
-~/.openclaw/skills/cex-trading/
+~/.openclaw/skills/TradeOS/
 ├── vault/
 │   └── exchanges.enc.json    # 加密的 API Key
 ├── data/

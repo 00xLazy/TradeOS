@@ -1,5 +1,5 @@
 /**
- * index.ts - CEX Trading Skill 统一入口
+ * index.ts - TradeOS Skill 统一入口
  *
  * 初始化所有模块并导出，供 OpenClaw Agent 调用。
  */
@@ -22,7 +22,7 @@ import { SecurityReporter } from './security-reporter.js';
 
 // ─── 数据目录 ───
 
-const DATA_DIR = path.join(os.homedir(), '.openclaw', 'skills', 'cex-trading');
+const DATA_DIR = path.join(os.homedir(), '.openclaw', 'skills', 'TradeOS');
 
 // ─── 初始化所有模块 ───
 
