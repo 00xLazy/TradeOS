@@ -1,5 +1,5 @@
 ---
-name: cex-trading
+name: TradeOS
 description: 中心化交易所交易与资产管理。通过自然语言在 Binance、OKX、Bybit 等 100+ 交易所下单交易，监控账户余额，追踪损益，支持条件单、异常检测和安全报告。
 version: 0.4.0
 author: 00xLazy
@@ -513,7 +513,7 @@ securityReporter.updateConfig({
 
 ## 4. Risk & Safety
 
-- 所有 API Key 使用 AES-256-GCM 加密，存储在本地 `~/.openclaw/skills/cex-trading/vault/`
+- 所有 API Key 使用 AES-256-GCM 加密，存储在本地 `~/.openclaw/skills/TradeOS/vault/`
 - 拒绝存储含提现权限的 API Key
 - 所有交易必须经过风控检查和用户二次确认
 - 风控规则可由用户自定义（单笔限额、日限额、最大杠杆等）
@@ -523,7 +523,7 @@ securityReporter.updateConfig({
 ## 5. Data Storage
 
 ```
-~/.openclaw/skills/cex-trading/
+~/.openclaw/skills/TradeOS/
 ├── vault/
 │   └── exchanges.enc.json    # 加密的 API Key
 ├── data/
