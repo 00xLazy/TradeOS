@@ -50,15 +50,30 @@ export class PortfolioTracker {
     this.exchangeManager = exchangeManager;
 
     const dbDir = path.join(dataDir, 'data');
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
+    try {
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+    } catch (err: any) {
+      console.error(`[PortfolioTracker] 无法创建数据目录 ${dbDir}:`, err.message);
+      throw err; // 致命错误，无法继续
     }
 
-    this.db = new Database(path.join(dbDir, 'portfolio.db'));
-    this.initDB();
+    const dbPath = path.join(dbDir, 'portfolio.db');
+    try {
+      this.db = new Database(dbPath);
+      this.initDB();
+    } catch (err: any) {
+      console.error(`[PortfolioTracker] 无法初始化数据库 ${dbPath}:`, err.message);
+      throw err; // 致命错误，无法继续
+    }
 
     // 设置数据库文件权限为 600（仅 owner 可读写）
-    fs.chmodSync(path.join(dbDir, 'portfolio.db'), 0o600);
+    try {
+      fs.chmodSync(dbPath, 0o600);
+    } catch (err: any) {
+      console.warn(`[PortfolioTracker] 无法设置数据库文件权限 ${dbPath}:`, err.message);
+    }
   }
 
   /**

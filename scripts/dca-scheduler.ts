@@ -76,7 +76,7 @@ export class DcaScheduler {
   private history: Map<string, DcaExecutionRecord[]> = new Map();
   private plansPath: string;
   private historyPath: string;
-  private intervalId: ReturnType<typeof setInterval> | null = null;
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private getPassword: (() => string) | null = null;
   private callbacks: DcaEventCallback[] = [];
   private exchangeManager: ExchangeManager;
@@ -105,26 +105,32 @@ export class DcaScheduler {
    * @param getPassword 返回主密码的函数
    */
   start(getPassword: () => string): void {
-    if (this.intervalId) return;
+    if (this.timeoutId) return; // 已在运行
     this.getPassword = getPassword;
 
-    this.intervalId = setInterval(() => {
-      this.tick().catch(err =>
-        console.error('[DcaScheduler] 轮询失败:', err.message)
-      );
-    }, POLL_INTERVAL_MS);
+    const _poll = async () => {
+      try {
+        await this.tick();
+      } catch (err: any) {
+        console.error('[DcaScheduler] 轮询失败:', err.message);
+      } finally {
+        if (this.timeoutId !== null) { // 确保未被 stop 停止
+          this.timeoutId = setTimeout(_poll, POLL_INTERVAL_MS);
+        }
+      }
+    };
 
-    // 立即执行一次
-    this.tick().catch(() => {});
+    // 立即执行一次并启动循环
+    this.timeoutId = setTimeout(_poll, 0);
   }
 
   /**
    * 停止调度器
    */
   stop(): void {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
     }
     this.getPassword = null;
   }
@@ -133,7 +139,7 @@ export class DcaScheduler {
    * 是否正在运行
    */
   isRunning(): boolean {
-    return this.intervalId !== null;
+    return this.timeoutId !== null;
   }
 
   // ─── 计划管理 ───
@@ -242,7 +248,9 @@ export class DcaScheduler {
         masterPassword, plan.exchangeId, plan.symbol
       );
       currentPrice = ticker.last;
-    } catch { /* 无法获取价格 */ }
+    } catch (err: any) {
+      console.warn(`[DcaScheduler] 无法从 ${plan.exchangeId} 获取 ${plan.symbol} 行情，无法计算盈亏:`, err.message);
+    }
 
     const currentValue = plan.totalAcquired * currentPrice;
     const unrealizedPnL = currentValue - plan.totalSpentUSDT;
@@ -494,8 +502,8 @@ export class DcaScheduler {
     for (const cb of this.callbacks) {
       try {
         await cb(event);
-      } catch {
-        // 回调失败不影响其他回调
+      } catch (err: any) {
+        console.error(`[DcaScheduler] 事件回调失败 (计划 ${event.plan.id}, 类型 ${event.type}):`, err.message);
       }
     }
   }
@@ -507,7 +515,8 @@ export class DcaScheduler {
       if (fs.existsSync(this.plansPath)) {
         this.plans = JSON.parse(fs.readFileSync(this.plansPath, 'utf8'));
       }
-    } catch {
+    } catch (err: any) {
+      console.error('[DcaScheduler] 加载定投计划失败，使用默认空计划:', err.message);
       this.plans = [];
     }
   }
@@ -533,7 +542,8 @@ export class DcaScheduler {
           }
         }
       }
-    } catch {
+    } catch (err: any) {
+      console.error('[DcaScheduler] 加载定投历史失败，使用默认空历史:', err.message);
       this.history = new Map();
     }
   }

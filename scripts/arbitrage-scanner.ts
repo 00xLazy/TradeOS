@@ -55,7 +55,7 @@ const DEFAULT_CONFIG: ArbitrageConfig = {
 export class ArbitrageScanner {
   private config: ArbitrageConfig;
   private configPath: string;
-  private intervalId: ReturnType<typeof setInterval> | null = null;
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private getPassword: (() => string) | null = null;
   private callbacks: ArbitrageAlertCallback[] = [];
   private lastAlertTimes: Map<string, number> = new Map(); // "symbol:buyEx:sellEx" → timestamp
@@ -73,26 +73,32 @@ export class ArbitrageScanner {
    * 启动扫描
    */
   start(getPassword: () => string): void {
-    if (this.intervalId) return;
+    if (this.timeoutId) return;
     this.getPassword = getPassword;
 
-    this.intervalId = setInterval(() => {
-      this.scan().catch(err =>
-        console.error('[ArbitrageScanner] 扫描失败:', err.message)
-      );
-    }, this.config.pollingMs);
+    const _poll = async () => {
+      try {
+        await this.scan();
+      } catch (err: any) {
+        console.error('[ArbitrageScanner] 扫描失败:', err.message);
+      } finally {
+        if (this.timeoutId !== null) { // 确保未被 stop 停止
+          this.timeoutId = setTimeout(_poll, this.config.pollingMs);
+        }
+      }
+    };
 
-    // 立即执行一次
-    this.scan().catch(() => {});
+    // 立即执行一次并启动循环
+    this.timeoutId = setTimeout(_poll, 0);
   }
 
   /**
    * 停止扫描
    */
   stop(): void {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
     }
     this.getPassword = null;
   }
@@ -101,7 +107,7 @@ export class ArbitrageScanner {
    * 是否正在运行
    */
   isRunning(): boolean {
-    return this.intervalId !== null;
+    return this.timeoutId !== null;
   }
 
   // ─── 配置管理 ───
@@ -114,7 +120,7 @@ export class ArbitrageScanner {
     this.saveConfig();
 
     // 如果更新了轮询间隔且正在运行，重启
-    if (updates.pollingMs && this.intervalId && this.getPassword) {
+    if (updates.pollingMs && this.timeoutId && this.getPassword) {
       this.stop();
       this.start(this.getPassword);
     }
@@ -253,8 +259,8 @@ export class ArbitrageScanner {
     for (const cb of this.callbacks) {
       try {
         await cb(alert);
-      } catch {
-        // 回调失败不影响其他回调
+      } catch (err: any) {
+        console.error(`[ArbitrageScanner] 告警回调失败 (套利机会 ${alert.opportunity.symbol}):`, err.message);
       }
     }
   }
@@ -266,7 +272,9 @@ export class ArbitrageScanner {
       if (fs.existsSync(this.configPath)) {
         return JSON.parse(fs.readFileSync(this.configPath, 'utf8'));
       }
-    } catch { /* use defaults */ }
+    } catch (err: any) {
+      console.error('[ArbitrageScanner] 加载套利配置失败，使用默认配置:', err.message);
+    }
     return {};
   }
 

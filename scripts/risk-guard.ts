@@ -65,13 +65,14 @@ export class RiskGuard {
   /**
    * 检查订单是否通过风控
    */
-  checkOrder(request: OrderRequest, estimatedCostUSD: number): RiskCheckResult {
+  checkOrder(request: OrderRequest, estimatedCostUSD: number, currentMarketPrice: number): RiskCheckResult {
     const reasons: string[] = [];
     const warnings: string[] = [];
     let blocked = false;
 
+    const normalizedSymbol = request.symbol.toUpperCase();
     // 1) 黑名单检查
-    if (this.rules.blockedSymbols.includes(request.symbol)) {
+    if (this.rules.blockedSymbols.includes(normalizedSymbol)) {
       reasons.push(`${request.symbol} 在交易黑名单中`);
       blocked = true;
     }
@@ -118,12 +119,35 @@ export class RiskGuard {
       }
     }
 
-    // 6) 大额市价单警告
+    // 6) 滑点检查 (仅限市价买单)
+    if (request.type === 'market' && request.side === 'buy' && estimatedCostUSD > 0 && request.amount > 0 && currentMarketPrice > 0) {
+      const impliedPrice = estimatedCostUSD / request.amount;
+      const slippage = (impliedPrice / currentMarketPrice - 1) * 100; // 百分比
+      if (slippage > this.rules.maxSlippagePercent) {
+        reasons.push(
+          `市价买单预估滑点 ${slippage.toFixed(2)}% 超过限额 ${this.rules.maxSlippagePercent}%。` +
+          `预估买入价 $${impliedPrice.toFixed(2)} vs 市场价 $${currentMarketPrice.toFixed(2)}。`
+        );
+        blocked = true;
+      }
+    } else if (request.type === 'market' && request.side === 'sell' && estimatedCostUSD > 0 && request.amount > 0 && currentMarketPrice > 0) {
+      const impliedPrice = estimatedCostUSD / request.amount;
+      const slippage = (1 - impliedPrice / currentMarketPrice) * 100; // 百分比
+      if (slippage > this.rules.maxSlippagePercent) {
+        reasons.push(
+          `市价卖单预估滑点 ${slippage.toFixed(2)}% 超过限额 ${this.rules.maxSlippagePercent}%。` +
+          `预估卖出价 $${impliedPrice.toFixed(2)} vs 市场价 $${currentMarketPrice.toFixed(2)}。`
+        );
+        blocked = true;
+      }
+    }
+
+    // 7) 大额市价单警告 (原 6)
     if (request.type === 'market' && estimatedCostUSD > 5000) {
       warnings.push('大额市价单可能产生较大滑点，建议使用限价单');
     }
 
-    // 7) 二次确认判定
+    // 8) 二次确认判定 (原 7)
     const requiresConfirmation =
       estimatedCostUSD > this.rules.confirmThresholdUSD ||
       request.market === 'futures' ||
