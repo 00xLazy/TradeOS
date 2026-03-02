@@ -50,7 +50,7 @@ export interface TradeRecord {
   price: number;
   cost: number;
   fee: number;
-  pnl?: number;             // 平仓盈亏
+  pnl?: number;             // 已实现的盈亏 (Realized PnL)，通常在平仓时计算并更新
 }
 
 // ─── PnLTracker 类 ───
@@ -63,15 +63,30 @@ export class PnLTracker {
     this.portfolioTracker = portfolioTracker;
 
     const dbDir = path.join(dataDir, 'data');
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
+    try {
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+    } catch (err: any) {
+      console.error(`[PnLTracker] 无法创建数据目录 ${dbDir}:`, err.message);
+      throw err; // 致命错误，无法继续
     }
 
-    this.db = new Database(path.join(dbDir, 'trades.db'));
-    this.initDB();
+    const dbPath = path.join(dbDir, 'trades.db');
+    try {
+      this.db = new Database(dbPath);
+      this.initDB();
+    } catch (err: any) {
+      console.error(`[PnLTracker] 无法初始化数据库 ${dbPath}:`, err.message);
+      throw err; // 致命错误，无法继续
+    }
 
     // 设置数据库文件权限为 600（仅 owner 可读写）
-    fs.chmodSync(path.join(dbDir, 'trades.db'), 0o600);
+    try {
+      fs.chmodSync(dbPath, 0o600);
+    } catch (err: any) {
+      console.warn(`[PnLTracker] 无法设置数据库文件权限 ${dbPath}:`, err.message);
+    }
   }
 
   /**
@@ -252,6 +267,7 @@ export class PnLTracker {
       'SELECT * FROM trades WHERE timestamp >= ? AND timestamp <= ?'
     ).all(startTime, endTime) as TradeRecord[];
 
+    // winTrades 和 lossTrades 的计算依赖于 pnl 字段是否已填充（即是否为已平仓交易）
     const winTrades = trades.filter(t => (t.pnl ?? 0) > 0).length;
     const lossTrades = trades.filter(t => (t.pnl ?? 0) < 0).length;
     const totalFees = trades.reduce((s, t) => s + t.fee, 0);

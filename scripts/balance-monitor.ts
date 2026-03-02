@@ -52,7 +52,7 @@ type AlertCallback = (event: AlertEvent) => void | Promise<void>;
 export class BalanceMonitor {
   private rules: AlertRule[] = [];
   private configPath: string;
-  private intervalId: ReturnType<typeof setInterval> | null = null;
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private pollingMs: number;
   private exchangeManager: ExchangeManager;
   private portfolioTracker: PortfolioTracker;
@@ -80,26 +80,32 @@ export class BalanceMonitor {
    * @param getPassword 返回主密码的函数，避免明文存储密码
    */
   start(getPassword: () => string): void {
-    if (this.intervalId) return; // 已在运行
+    if (this.timeoutId) return; // 已在运行
     this.getPassword = getPassword;
 
-    this.intervalId = setInterval(() => {
-      this.checkAllRules().catch(err =>
-        console.error('[BalanceMonitor] 检查失败:', err.message)
-      );
-    }, this.pollingMs);
+    const _poll = async () => {
+      try {
+        await this.checkAllRules();
+      } catch (err: any) {
+        console.error('[BalanceMonitor] 检查失败:', err.message);
+      } finally {
+        if (this.timeoutId !== null) { // 确保未被 stop 停止
+          this.timeoutId = setTimeout(_poll, this.pollingMs);
+        }
+      }
+    };
 
-    // 立即执行一次
-    this.checkAllRules().catch(() => {});
+    // 立即执行一次并启动循环
+    this.timeoutId = setTimeout(_poll, 0);
   }
 
   /**
    * 停止监控
    */
   stop(): void {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
     }
     this.getPassword = null;
   }
@@ -108,7 +114,7 @@ export class BalanceMonitor {
    * 是否正在运行
    */
   isRunning(): boolean {
-    return this.intervalId !== null;
+    return this.timeoutId !== null;
   }
 
   // ─── 规则管理 ───
@@ -189,8 +195,8 @@ export class BalanceMonitor {
           this.saveRules();
           await this.emitAlert(event);
         }
-      } catch {
-        // 单条规则检查失败不影响其他规则
+      } catch (err: any) {
+        console.warn(`[BalanceMonitor] 规则 ${rule.id} (${rule.name}) 检查失败:`, err.message);
       }
     }
 
@@ -310,8 +316,8 @@ export class BalanceMonitor {
     for (const cb of this.callbacks) {
       try {
         await cb(event);
-      } catch {
-        // 回调失败不影响其他回调
+      } catch (err: any) {
+        console.error(`[BalanceMonitor] 告警回调失败 (规则 ${event.rule.id}):`, err.message);
       }
     }
   }
@@ -323,7 +329,8 @@ export class BalanceMonitor {
       if (fs.existsSync(this.configPath)) {
         this.rules = JSON.parse(fs.readFileSync(this.configPath, 'utf8'));
       }
-    } catch {
+    } catch (err: any) {
+      console.error('[BalanceMonitor] 加载规则失败，使用默认空规则:', err.message);
       this.rules = [];
     }
   }

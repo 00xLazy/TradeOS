@@ -98,10 +98,11 @@ export class OrderExecutor {
     const currentPrice = ticker.last;
     const price = request.type === 'market' ? currentPrice : (request.price ?? currentPrice);
     const estimatedValue = request.amount * price;
-    const estimatedFee = estimatedValue * 0.001; // 默认 0.1% 手续费估算
+    const feeRate = await this.exchangeManager.getTradingFeeRate(masterPassword, request.exchange, request.symbol, 'taker');
+    const estimatedFee = estimatedValue * feeRate;
 
     // 风控检查
-    const riskCheck = this.riskGuard.checkOrder(request, estimatedValue);
+    const riskCheck = this.riskGuard.checkOrder(request, estimatedValue, currentPrice);
 
     const warnings: string[] = [...riskCheck.warnings];
     if (request.market === 'futures' && request.leverage && request.leverage > 10) {
@@ -183,7 +184,7 @@ export class OrderExecutor {
       masterPassword, request.exchange, request.symbol
     );
     const estimatedCost = request.amount * (request.price ?? ticker.last);
-    const riskCheck = this.riskGuard.checkOrder(request, estimatedCost);
+    const riskCheck = this.riskGuard.checkOrder(request, estimatedCost, ticker.last);
 
     if (riskCheck.blocked) {
       return {

@@ -235,6 +235,50 @@ export class ExchangeManager {
   }
 
   /**
+   * 获取指定交易对的交易手续费率
+   * @param type 'maker' 或 'taker'
+   * @returns 手续费率 (如 0.001 代表 0.1%)，如果无法获取则返回默认值
+   */
+  async getTradingFeeRate(
+    masterPassword: string,
+    exchangeId: string,
+    symbol: string,
+    type: 'maker' | 'taker' = 'taker'
+  ): Promise<number> {
+    try {
+      const exchange = await this.getExchange(masterPassword, exchangeId);
+      await exchange.loadMarkets(); // 确保市场信息已加载
+
+      const market = exchange.market(symbol);
+      if (market) {
+        if (type === 'maker' && typeof market.maker === 'number') {
+          return market.maker;
+        }
+        if (type === 'taker' && typeof market.taker === 'number') {
+          return market.taker;
+        }
+      }
+      // 如果市场信息中没有，尝试获取交易所全局费率（如果支持）
+      if (typeof exchange.fetchTradingFees === 'function') {
+        const fees = await exchange.fetchTradingFees();
+        // CCXT 的 fetchTradingFees 返回格式不统一，这里做个简单尝试
+        // 假设 fees.info 中有 maker/taker fee
+        if (fees && (fees as any).info) {
+          if (type === 'maker' && typeof (fees as any).info.makerFee === 'number') return (fees as any).info.makerFee;
+          if (type === 'taker' && typeof (fees as any).info.takerFee === 'number') return (fees as any).info.takerFee;
+        }
+        // 尝试从 fees 对象本身获取
+        if (type === 'maker' && typeof fees.maker === 'number') return fees.maker;
+        if (type === 'taker' && typeof fees.taker === 'number') return fees.taker;
+      }
+    } catch (err: any) {
+      console.warn(`[ExchangeManager] 无法获取 ${exchangeId} ${symbol} 的 ${type} 手续费率，使用默认值 0.001:`, err.message);
+    }
+    // 默认值：0.1%
+    return 0.001;
+  }
+
+  /**
    * 检测 API Key 权限（通过实际 API 调用验证）
    */
   async detectPermissions(
@@ -250,13 +294,17 @@ export class ExchangeManager {
     try {
       await exchange.fetchBalance();
       permissions.push('read');
-    } catch { /* no read permission */ }
+    } catch (err: any) {
+      console.debug(`[ExchangeManager] ${exchange.id} 不具备读取余额权限:`, err.message);
+    }
 
     // 尝试查看挂单 → 说明有交易读权限
     try {
       await exchange.fetchOpenOrders();
       permissions.push('spot');
-    } catch { /* no spot permission */ }
+    } catch (err: any) {
+      console.debug(`[ExchangeManager] ${exchange.id} 不具备现货交易权限:`, err.message);
+    }
 
     // 检测提现权限：通过交易所 API 返回的权限信息
     try {
@@ -274,7 +322,9 @@ export class ExchangeManager {
           }
         }
       }
-    } catch { /* 交易所不支持此 API */ }
+    } catch (err: any) {
+      console.debug(`[ExchangeManager] ${exchange.id} 不支持 fetchApiPermissions 或权限检测失败:`, err.message);
+    }
 
     // 备用检测：尝试调用获取充提历史（如果成功则可能有提现权限）
     if (!hasWithdraw) {
@@ -284,7 +334,8 @@ export class ExchangeManager {
           // 如果能成功获取提现历史，说明至少有读取提现记录的权限
           hasWithdraw = true;
         }
-      } catch {
+      } catch (err: any) {
+        console.debug(`[ExchangeManager] ${exchange.id} 不具备读取提现记录权限或不支持 fetchWithdrawals:`, err.message);
         // 无权限或交易所不支持，视为安全
       }
     }
@@ -380,14 +431,17 @@ export class ExchangeManager {
             prices[coin] = ticker.last;
           }
         }
-      } catch {
+      } catch (err: any) {
+        console.warn(`[ExchangeManager] 从 ${exchange.id} 批量获取行情失败，尝试逐个获取:`, err.message);
         // 如果批量获取失败，逐个获取
         for (const sym of symbols) {
           try {
             const ticker = await exchange.fetchTicker(sym);
             const coin = sym.split('/')[0];
             if (ticker.last) prices[coin] = ticker.last;
-          } catch { /* skip */ }
+          } catch (individualErr: any) {
+            console.warn(`[ExchangeManager] 从 ${exchange.id} 获取 ${sym} 行情失败，跳过:`, individualErr.message);
+          }
         }
       }
     }

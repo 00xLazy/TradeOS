@@ -67,7 +67,7 @@ const HOURS_PER_YEAR = 8766;
 export class FundingRateMonitor {
   private config: FundingRateConfig;
   private configPath: string;
-  private intervalId: ReturnType<typeof setInterval> | null = null;
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private getPassword: (() => string) | null = null;
   private callbacks: FundingRateAlertCallback[] = [];
   private lastAlertTimes: Map<string, number> = new Map(); // "exchange:symbol" → timestamp
@@ -85,26 +85,32 @@ export class FundingRateMonitor {
    * 启动监控
    */
   start(getPassword: () => string): void {
-    if (this.intervalId) return;
+    if (this.timeoutId) return;
     this.getPassword = getPassword;
 
-    this.intervalId = setInterval(() => {
-      this.scan().catch(err =>
-        console.error('[FundingRateMonitor] 扫描失败:', err.message)
-      );
-    }, this.config.pollingMs);
+    const _poll = async () => {
+      try {
+        await this.scan();
+      } catch (err: any) {
+        console.error('[FundingRateMonitor] 扫描失败:', err.message);
+      } finally {
+        if (this.timeoutId !== null) { // 确保未被 stop 停止
+          this.timeoutId = setTimeout(_poll, this.config.pollingMs);
+        }
+      }
+    };
 
-    // 立即执行一次
-    this.scan().catch(() => {});
+    // 立即执行一次并启动循环
+    this.timeoutId = setTimeout(_poll, 0);
   }
 
   /**
    * 停止监控
    */
   stop(): void {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
     }
     this.getPassword = null;
   }
@@ -113,7 +119,7 @@ export class FundingRateMonitor {
    * 是否正在运行
    */
   isRunning(): boolean {
-    return this.intervalId !== null;
+    return this.timeoutId !== null;
   }
 
   // ─── 配置管理 ───
@@ -126,7 +132,7 @@ export class FundingRateMonitor {
     this.saveConfig();
 
     // 如果更新了轮询间隔且正在运行，重启
-    if (updates.pollingMs && this.intervalId && this.getPassword) {
+    if (updates.pollingMs && this.timeoutId && this.getPassword) {
       this.stop();
       this.start(this.getPassword);
     }
@@ -262,7 +268,8 @@ export class FundingRateMonitor {
         intervalHours,
         timestamp: Date.now(),
       };
-    } catch {
+    } catch (err: any) {
+      console.warn(`[FundingRateMonitor] 从 ${exchangeId} 获取 ${symbol} 资金费率失败:`, err.message);
       return null;
     }
   }
@@ -302,8 +309,8 @@ export class FundingRateMonitor {
     for (const cb of this.callbacks) {
       try {
         await cb(alert);
-      } catch {
-        // 回调失败不影响其他回调
+      } catch (err: any) {
+        console.error(`[FundingRateMonitor] 告警回调失败 (资金费率机会 ${alert.opportunity.symbol}):`, err.message);
       }
     }
   }
@@ -315,7 +322,9 @@ export class FundingRateMonitor {
       if (fs.existsSync(this.configPath)) {
         return JSON.parse(fs.readFileSync(this.configPath, 'utf8'));
       }
-    } catch { /* use defaults */ }
+    } catch (err: any) {
+      console.error('[FundingRateMonitor] 加载资金费率配置失败，使用默认配置:', err.message);
+    }
     return {};
   }
 
