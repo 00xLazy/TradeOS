@@ -1,7 +1,7 @@
 ---
 name: cex-trading
-description: 中心化交易所交易与资产管理。通过自然语言在 Binance、OKX、Bybit 等 100+ 交易所下单交易，监控账户余额，追踪损益。
-version: 0.3.0
+description: 中心化交易所交易与资产管理。通过自然语言在 Binance、OKX、Bybit 等 100+ 交易所下单交易，监控账户余额，追踪损益，支持条件单、异常检测和安全报告。
+version: 0.4.0
 author: 00xLazy
 permissions:
   - filesystem
@@ -15,6 +15,9 @@ tags:
   - dca
   - arbitrage
   - funding-rate
+  - conditional-order
+  - security
+  - anomaly
 ---
 
 # CEX Trading — 交易所交易与资产管理
@@ -34,6 +37,9 @@ tags:
 - DCA 定投策略（按小时/日/周/月自动定投）
 - 跨所套利机会扫描与告警
 - 永续合约资金费率监控与套利提醒
+- 条件单/计划委托（价格达标自动下单）
+- 异常检测告警（余额异常、未知订单、API 故障）
+- 定期安全报告（API Key 安全评分与建议）
 
 ## 2. When to use
 
@@ -51,7 +57,11 @@ tags:
 - 用户想查看、暂停或删除定投计划
 - 用户想监控跨交易所的套利机会
 - 用户想查看资金费率或费率套利机会
-- 用户提到"交易"、"下单"、"买入"、"卖出"、"余额"、"持仓"、"资产"、"盈亏"、"定投"、"套利"、"费率"等关键词
+- 用户想创建条件单（到达某个价格自动买入/卖出）
+- 用户想查看或管理已有的条件单
+- 用户想监控账户异常行为（余额突变、未知订单）
+- 用户想查看 API Key 安全评分和安全建议
+- 用户提到"交易"、"下单"、"买入"、"卖出"、"余额"、"持仓"、"资产"、"盈亏"、"定投"、"套利"、"费率"、"条件单"、"计划委托"、"异常"、"安全报告"等关键词
 
 ## 3. How to use
 
@@ -354,6 +364,153 @@ BTC/USDT:USDT (Binance)
 - 正费率 → 多头付给空头，建议做空收取；负费率 → 反之
 - 注册 `fundingRateMonitor.onAlert(callback)` 接收告警
 
+### 3.11 条件单/计划委托
+
+**创建条件单：**
+```
+调用 conditionalOrderManager.createOrder({
+  name: 'BTC 跌到 80000 买入',
+  exchangeId: 'binance',
+  symbol: 'BTC/USDT',
+  condition: {
+    type: 'price_below',       // 'price_above' | 'price_below' | 'price_change_up' | 'price_change_down'
+    targetPrice: 80000         // price_above/below 用
+  },
+  order: {
+    side: 'buy',
+    type: 'market',
+    amount: 0.01,
+    market: 'spot'
+  },
+  triggerMode: 'once',         // 'once' 一次性 | 'recurring' 持续触发
+  cooldownMs: 60000,           // recurring 模式下触发间冷却 (ms)
+  expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000  // 可选：7天后过期
+})
+```
+
+**价格变动条件单：**
+```
+调用 conditionalOrderManager.createOrder({
+  name: 'ETH 涨幅超 5% 卖出',
+  exchangeId: 'okx',
+  symbol: 'ETH/USDT',
+  condition: {
+    type: 'price_change_up',
+    changePercent: 5,
+    basePrice: 3200            // 基准价格
+  },
+  order: {
+    side: 'sell',
+    type: 'market',
+    amount: 1,
+    market: 'spot'
+  }
+})
+```
+
+**管理条件单：**
+```
+conditionalOrderManager.listOrders()                    // 列出所有条件单
+conditionalOrderManager.cancelOrder(orderId)             // 取消
+conditionalOrderManager.pauseOrder(orderId)              // 暂停
+conditionalOrderManager.resumeOrder(orderId)             // 恢复
+conditionalOrderManager.getExecutionHistory(orderId, 20) // 执行历史
+```
+
+**启动/停止：**
+```
+conditionalOrderManager.start(getPassword)  // 启动（15s 轮询检查价格）
+conditionalOrderManager.stop()              // 停止
+```
+
+**重要说明：**
+- 条件单在创建时即视为用户已授权自动执行
+- 触发后通过 previewOrder → executeOrder 流程下单，风控仍然生效
+- once 模式触发后自动变为 triggered 状态；recurring 模式会在冷却期后继续监控
+- 注册 `conditionalOrderManager.onEvent(callback)` 接收触发/过期通知
+
+### 3.12 异常检测告警
+
+**启动/停止异常检测：**
+```
+anomalyDetector.start(getPassword)   // 启动（60s 轮询）
+anomalyDetector.stop()               // 停止
+```
+
+**配置异常检测：**
+```
+anomalyDetector.updateConfig({
+  enabled: true,
+  balanceDropThresholdPercent: 10,    // 余额下降超过 10% 触发 critical 告警
+  balanceCheckWindowMs: 300000,       // 5 分钟窗口
+  apiFailureThreshold: 5,            // API 连续失败 5 次触发告警
+  cooldownMs: 1800000,               // 同一异常 30 分钟冷却
+  pollingMs: 60000                   // 60 秒轮询
+})
+```
+
+**检测类型：**
+- `balance_drop`（critical）：短时间内总资产下降超过阈值，定位具体交易所
+- `unknown_order`（warning）：某交易所短时间内出现大量成交订单
+- `api_failure`（warning）：某交易所 API 连续失败超过阈值
+
+**告警格式示例：**
+```
+异常告警：总资产在 5 分钟内下降 12.3%（$58,030 → $50,893）
+详情：binance: -15.2% ($45,230 → $38,350)
+```
+
+**重要说明：**
+- 余额快照持久化保存（最近 100 条），重启后不丢失历史数据
+- 注册 `anomalyDetector.onAlert(callback)` 接收告警
+
+### 3.13 安全报告
+
+**手动生成安全报告：**
+```
+const report = await securityReporter.generateReport(masterPassword)
+```
+
+**启动自动报告（每 24 小时）：**
+```
+securityReporter.start(getPassword)   // 启动
+securityReporter.stop()               // 停止
+```
+
+**获取上次报告：**
+```
+securityReporter.getLastReport()
+```
+
+**配置：**
+```
+securityReporter.updateConfig({
+  pollingMs: 86400000,                // 24 小时生成一次
+  keyRotationWarningDays: 90,         // 超过 90 天建议轮换
+  keyRotationCriticalDays: 180        // 超过 180 天强烈建议轮换
+})
+```
+
+**安全检查项目（每个交易所满分 100 分）：**
+
+| 检查项 | pass | warning | fail |
+|--------|------|---------|------|
+| API Key 年龄 | <90天 (25分) | 90-180天 (15分) | >180天 (5分) |
+| 提现权限 | 无提现 (25分) | — | 有提现 (0分) |
+| IP 白名单 | 已设置 (25分) | 未设置 (10分) | — |
+| API 连接状态 | 正常 (25分) | — | 连接失败 (0分) |
+
+**报告格式示例：**
+```
+安全评分 85/100 — 状态良好。共检查 2 个交易所 API Key。
+建议：
+  - binance: Key 已使用 95 天，建议轮换（超过 90 天）
+  - okx: 未设置 IP 白名单，建议在交易所后台配置
+```
+
+**重要说明：**
+- 注册 `securityReporter.onReport(callback)` 接收报告生成通知
+
 ## 4. Risk & Safety
 
 - 所有 API Key 使用 AES-256-GCM 加密，存储在本地 `~/.openclaw/skills/cex-trading/vault/`
@@ -381,6 +538,15 @@ BTC/USDT:USDT (Binance)
 │   └── config.json           # 套利扫描配置
 ├── funding/
 │   └── config.json           # 资金费率监控配置
+├── conditional-orders/
+│   ├── orders.json           # 条件单配置
+│   └── history.json          # 条件单执行历史
+├── anomaly/
+│   ├── config.json           # 异常检测配置
+│   └── snapshots.json        # 余额快照历史
+├── security/
+│   ├── config.json           # 安全报告配置
+│   └── last-report.json      # 上次安全报告
 └── risk-rules.json           # 风控规则配置
 ```
 
