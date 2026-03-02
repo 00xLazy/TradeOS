@@ -16,6 +16,9 @@ import { PnLTracker } from './pnl-tracker.js';
 import { DcaScheduler } from './dca-scheduler.js';
 import { ArbitrageScanner } from './arbitrage-scanner.js';
 import { FundingRateMonitor } from './funding-rate-monitor.js';
+import { ConditionalOrderManager } from './conditional-order.js';
+import { AnomalyDetector } from './anomaly-detector.js';
+import { SecurityReporter } from './security-reporter.js';
 
 // ─── 数据目录 ───
 
@@ -39,6 +42,11 @@ const dcaScheduler = new DcaScheduler(DATA_DIR, exchangeManager, orderExecutor);
 const arbitrageScanner = new ArbitrageScanner(DATA_DIR, exchangeManager);
 const fundingRateMonitor = new FundingRateMonitor(DATA_DIR, exchangeManager);
 
+// v0.4.0 新增模块
+const conditionalOrderManager = new ConditionalOrderManager(DATA_DIR, exchangeManager, orderExecutor);
+const anomalyDetector = new AnomalyDetector(DATA_DIR, exchangeManager, vault);
+const securityReporter = new SecurityReporter(DATA_DIR, vault, exchangeManager);
+
 // ─── 导出 ───
 
 export {
@@ -52,6 +60,9 @@ export {
   dcaScheduler,
   arbitrageScanner,
   fundingRateMonitor,
+  conditionalOrderManager,
+  anomalyDetector,
+  securityReporter,
   SUPPORTED_EXCHANGES,
   DATA_DIR,
 };
@@ -67,3 +78,6 @@ export type { PnLReport, TradeStats } from './pnl-tracker.js';
 export type { DcaPlan, DcaExecutionRecord, DcaPlanSummary, DcaEvent, DcaFrequency } from './dca-scheduler.js';
 export type { ArbitrageConfig, ArbitrageOpportunity, ArbitrageAlert } from './arbitrage-scanner.js';
 export type { FundingRateConfig, FundingRateInfo, FundingRateOpportunity, FundingRateAlert } from './funding-rate-monitor.js';
+export type { ConditionalOrder, ConditionalOrderExecution, ConditionalOrderEvent, ConditionType, TriggerMode, ConditionalOrderStatus } from './conditional-order.js';
+export type { AnomalyConfig, AnomalyEvent, AnomalyType } from './anomaly-detector.js';
+export type { SecurityReport, SecurityReporterConfig, SecurityReportEvent, SecurityCheckItem, ExchangeSecurityReport } from './security-reporter.js';

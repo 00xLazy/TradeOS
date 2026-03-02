@@ -1,8 +1,8 @@
 # TradeOS
 
-**An OpenClaw Skill for centralized exchange trading, DCA automation, arbitrage scanning & PnL tracking.**
+**An OpenClaw Skill for centralized exchange trading, DCA automation, conditional orders, arbitrage scanning, anomaly detection & security reporting.**
 
-Trade on 100+ cryptocurrency exchanges via natural language. Manage API keys securely, automate dollar-cost averaging, monitor cross-exchange arbitrage opportunities, track funding rate yields, and manage your entire portfolio — all from your OpenClaw chat interface.
+Trade on 100+ cryptocurrency exchanges via natural language. Manage API keys securely, automate dollar-cost averaging, set conditional orders, monitor cross-exchange arbitrage opportunities, track funding rate yields, detect account anomalies, and manage your entire portfolio — all from your OpenClaw chat interface.
 
 [中文文档](./README_CN.md)
 
@@ -43,6 +43,32 @@ Trade on 100+ cryptocurrency exchanges via natural language. Manage API keys sec
 - Alerts when annualized rate exceeds threshold (default 30%)
 - Suggests direction: positive rate → short to collect; negative rate → long to collect
 - **Alert only** — does not auto-trade
+
+### Conditional Orders
+- Set price-triggered orders: buy/sell when price reaches a target
+- Condition types: price above/below, price change up/down (percentage-based)
+- Trigger modes: **once** (single execution) or **recurring** (with cooldown)
+- Optional expiration time for time-limited orders
+- Automatic `previewOrder → executeOrder` flow (pre-authorized at creation)
+- Risk guard enforced on every trigger
+- Full execution history tracking
+
+### Anomaly Detection
+- **Balance drop alert** — critical alert when total portfolio drops significantly within a short window (default 10% in 5 minutes)
+- **Unknown order alert** — warning when unusual order activity is detected on an exchange
+- **API failure alert** — warning when consecutive API calls fail (possible key expiration or ban)
+- Configurable thresholds and cooldown periods
+- Balance snapshots persisted for cross-restart comparison
+
+### Security Reports
+- Periodic security audit of all configured API keys (default every 24 hours)
+- **100-point scoring system** per exchange:
+  - API Key age (25 pts) — warns after 90 days, critical after 180 days
+  - Withdrawal permission (25 pts) — fails if withdrawal is detected
+  - IP whitelist (25 pts) — warns if not configured
+  - API connection status (25 pts) — fails if connection is down
+- Actionable recommendations generated automatically
+- Manual report generation available on demand
 
 ### Risk Management
 - Per-order value limit (default $10,000)
@@ -221,6 +247,54 @@ Agent:
        Suggestion: Short BTC perpetual to collect funding from longs.
 ```
 
+### Conditional Orders
+
+```
+You:   Buy 0.01 BTC if it drops below $80,000
+Agent:
+       Conditional Order Created
+       ──────────────
+       Name:      BTC price below $80,000 buy
+       Exchange:  Binance
+       Pair:      BTC/USDT
+       Condition: Price falls below $80,000
+       Action:    Market buy 0.01 BTC
+       Mode:      Once
+       Status:    Active (checking every 15s)
+
+You:   Show my conditional orders
+Agent:
+       Active Conditional Orders
+       ──────────────
+       1. BTC price below $80,000 buy — Active, 0 triggers
+       2. ETH up 5% sell — Active, 2 triggers
+```
+
+### Security Report
+
+```
+You:   Run a security check on my API keys
+Agent:
+       Security Report
+       ──────────────
+       Overall Score: 85/100 — Good
+
+       Binance:  90/100
+         ✓ API Key age: 45 days
+         ✓ No withdrawal permission
+         ✓ IP whitelist configured (2 IPs)
+         ✓ API connection OK
+
+       OKX:      80/100
+         ✓ API Key age: 45 days
+         ✓ No withdrawal permission
+         ⚠ No IP whitelist configured
+         ✓ API connection OK
+
+       Recommendations:
+         - OKX: Set up IP whitelist in exchange settings
+```
+
 ### Set Price Alert
 
 ```
@@ -267,7 +341,10 @@ cex-trading/
     ├── pnl-tracker.ts               # PnL tracking & report generation
     ├── dca-scheduler.ts             # DCA automated buy scheduler
     ├── arbitrage-scanner.ts         # Cross-exchange arbitrage scanner
-    └── funding-rate-monitor.ts      # Funding rate monitoring & alerts
+    ├── funding-rate-monitor.ts      # Funding rate monitoring & alerts
+    ├── conditional-order.ts         # Conditional/trigger order manager
+    ├── anomaly-detector.ts          # Account anomaly detection & alerts
+    └── security-reporter.ts         # Periodic security audit & reporting
 ```
 
 ### Module Overview
@@ -284,6 +361,9 @@ cex-trading/
 | `dca-scheduler` | Automated DCA plans (hourly/daily/weekly/monthly), execution history, PnL tracking per plan |
 | `arbitrage-scanner` | Cross-exchange price spread detection, ask/bid comparison, configurable profit threshold alerts |
 | `funding-rate-monitor` | Perpetual funding rate monitoring, annualized yield calculation, directional suggestions |
+| `conditional-order` | Price-triggered conditional orders, once/recurring modes, auto-execution with risk guard |
+| `anomaly-detector` | Balance drop detection, unknown order alerts, API failure tracking, configurable thresholds |
+| `security-reporter` | Periodic API key security audits, 100-point scoring, actionable recommendations |
 
 ---
 
@@ -307,6 +387,15 @@ All data is stored locally on your machine:
 │   └── config.json           # Arbitrage scanner configuration
 ├── funding/
 │   └── config.json           # Funding rate monitor configuration
+├── conditional-orders/
+│   ├── orders.json           # Conditional order configuration
+│   └── history.json          # Conditional order execution history
+├── anomaly/
+│   ├── config.json           # Anomaly detection configuration
+│   └── snapshots.json        # Balance snapshot history
+├── security/
+│   ├── config.json           # Security reporter configuration
+│   └── last-report.json      # Last security report
 └── risk-rules.json           # Risk management rules
 ```
 
