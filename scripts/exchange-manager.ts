@@ -86,7 +86,8 @@ export class ExchangeManager {
     exchangeId: string,
     label?: string
   ): Promise<Exchange> {
-    const cacheKey = `${exchangeId}:${label ?? 'default'}`;
+    const cred = await this.resolveCredential(masterPassword, exchangeId, label);
+    const cacheKey = `${cred.exchangeId}:${cred.label}`;
     const cached = this.instances.get(cacheKey);
     if (cached && Date.now() < cached.expiresAt) {
       return cached.instance;
@@ -95,11 +96,6 @@ export class ExchangeManager {
     // 缓存过期则移除
     if (cached) {
       this.instances.delete(cacheKey);
-    }
-
-    const cred = await this.vault.getCredential(masterPassword, exchangeId, label);
-    if (!cred) {
-      throw new Error(`未找到交易所 ${exchangeId} 的 API Key。请先添加。`);
     }
 
     const exchange = this.createInstance(cred);
@@ -120,6 +116,7 @@ export class ExchangeManager {
     exchangeId: string,
     label?: string
   ): Promise<ExchangeBalance> {
+    const resolved = await this.resolveCredential(masterPassword, exchangeId, label);
     const exchange = await this.getExchange(masterPassword, exchangeId, label);
     const balance: Balances = await exchange.fetchBalance();
 
@@ -151,7 +148,7 @@ export class ExchangeManager {
 
     return {
       exchangeId,
-      label: label ?? 'default',
+      label: resolved.label,
       balances: formatted,
       totalUSD,
       timestamp: Date.now(),
@@ -222,9 +219,10 @@ export class ExchangeManager {
   async getTicker(
     masterPassword: string,
     exchangeId: string,
-    symbol: string
+    symbol: string,
+    label?: string
   ): Promise<TickerInfo> {
-    const exchange = await this.getExchange(masterPassword, exchangeId);
+    const exchange = await this.getExchange(masterPassword, exchangeId, label);
     const ticker: Ticker = await exchange.fetchTicker(symbol);
 
     return {
@@ -245,9 +243,10 @@ export class ExchangeManager {
    */
   async getMarkets(
     masterPassword: string,
-    exchangeId: string
+    exchangeId: string,
+    label?: string
   ): Promise<Market[]> {
-    const exchange = await this.getExchange(masterPassword, exchangeId);
+    const exchange = await this.getExchange(masterPassword, exchangeId, label);
     return Object.values(exchange.markets);
   }
 
@@ -260,10 +259,11 @@ export class ExchangeManager {
     masterPassword: string,
     exchangeId: string,
     symbol: string,
-    type: 'maker' | 'taker' = 'taker'
+    type: 'maker' | 'taker' = 'taker',
+    label?: string
   ): Promise<number> {
     try {
-      const exchange = await this.getExchange(masterPassword, exchangeId);
+      const exchange = await this.getExchange(masterPassword, exchangeId, label);
       await exchange.loadMarkets(); // 确保市场信息已加载
 
       const market = exchange.market(symbol);
@@ -390,6 +390,39 @@ export class ExchangeManager {
         this.instances.delete(key);
       }
     }
+  }
+
+  private async resolveCredential(
+    masterPassword: string,
+    exchangeId: string,
+    label?: string
+  ): Promise<ExchangeCredential> {
+    const credentials = await this.vault.listCredentials(masterPassword);
+    const matched = credentials.filter(c => c.exchangeId === exchangeId);
+    if (matched.length === 0) {
+      throw new Error(`未找到交易所 ${exchangeId} 的 API Key。请先添加。`);
+    }
+
+    if (label) {
+      const credential = matched.find(c => c.label === label);
+      if (!credential) {
+        throw new Error(`未找到交易所 ${exchangeId} label=${label} 的 API Key。`);
+      }
+      return credential;
+    }
+
+    if (matched.length > 1) {
+      const defaultCredential = matched.find(c => c.label === 'default');
+      if (defaultCredential) {
+        return defaultCredential;
+      }
+      const labels = matched.map(c => c.label).join(', ');
+      throw new Error(
+        `交易所 ${exchangeId} 配置了多个账户（${labels}）。请在请求中显式指定 accountLabel。`
+      );
+    }
+
+    return matched[0];
   }
 
   private createInstance(cred: ExchangeCredential): Exchange {

@@ -10,6 +10,7 @@ import type { Exchange, Order } from 'ccxt';
 import { ExchangeManager, type TickerInfo } from './exchange-manager.js';
 import { RiskGuard, type RiskCheckResult } from './risk-guard.js';
 import type { PnLTracker } from './pnl-tracker.js';
+import { sanitizeErrorMessage } from './security-utils.js';
 
 // ─── 类型定义 ───
 
@@ -19,6 +20,7 @@ export type MarketType = 'spot' | 'futures';
 
 export interface OrderRequest {
   exchange: string;
+  accountLabel?: string;   // 多账户场景下指定凭证 label
   symbol: string;         // 如 'BTC/USDT'
   side: OrderSide;
   type: OrderType;
@@ -91,14 +93,26 @@ export class OrderExecutor {
     masterPassword: string,
     request: OrderRequest
   ): Promise<OrderPreview> {
+    this.validateOrderRequest(request);
+
     const ticker = await this.exchangeManager.getTicker(
-      masterPassword, request.exchange, request.symbol
+      masterPassword, request.exchange, request.symbol, request.accountLabel
     );
 
     const currentPrice = ticker.last;
     const price = this.getEstimatedExecutionPrice(request, ticker);
+    if (!Number.isFinite(price) || price <= 0) {
+      throw new Error('无法获取有效成交价格，请稍后重试或改用限价单。');
+    }
+
     const estimatedValue = request.amount * price;
-    const feeRate = await this.exchangeManager.getTradingFeeRate(masterPassword, request.exchange, request.symbol, 'taker');
+    const feeRate = await this.exchangeManager.getTradingFeeRate(
+      masterPassword,
+      request.exchange,
+      request.symbol,
+      'taker',
+      request.accountLabel
+    );
     const estimatedFee = estimatedValue * feeRate;
 
     // 风控检查
@@ -181,7 +195,7 @@ export class OrderExecutor {
 
     // 再次进行风控检查
     const ticker = await this.exchangeManager.getTicker(
-      masterPassword, request.exchange, request.symbol
+      masterPassword, request.exchange, request.symbol, request.accountLabel
     );
     const estimatedCost = request.amount * this.getEstimatedExecutionPrice(request, ticker);
     const riskCheck = this.riskGuard.checkOrder(request, estimatedCost, ticker.last);
@@ -203,7 +217,7 @@ export class OrderExecutor {
     }
 
     const exchange = await this.exchangeManager.getExchange(
-      masterPassword, request.exchange
+      masterPassword, request.exchange, request.accountLabel
     );
 
     try {
@@ -319,10 +333,11 @@ export class OrderExecutor {
     masterPassword: string,
     exchangeId: string,
     orderId: string,
-    symbol: string
+    symbol: string,
+    accountLabel?: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const exchange = await this.exchangeManager.getExchange(masterPassword, exchangeId);
+      const exchange = await this.exchangeManager.getExchange(masterPassword, exchangeId, accountLabel);
       await exchange.cancelOrder(orderId, symbol);
       return { success: true };
     } catch (err: any) {
@@ -336,9 +351,10 @@ export class OrderExecutor {
   async getOpenOrders(
     masterPassword: string,
     exchangeId: string,
-    symbol?: string
+    symbol?: string,
+    accountLabel?: string
   ): Promise<Order[]> {
-    const exchange = await this.exchangeManager.getExchange(masterPassword, exchangeId);
+    const exchange = await this.exchangeManager.getExchange(masterPassword, exchangeId, accountLabel);
     return exchange.fetchOpenOrders(symbol);
   }
 
@@ -349,9 +365,10 @@ export class OrderExecutor {
     masterPassword: string,
     exchangeId: string,
     symbol?: string,
-    limit: number = 20
+    limit: number = 20,
+    accountLabel?: string
   ): Promise<Order[]> {
-    const exchange = await this.exchangeManager.getExchange(masterPassword, exchangeId);
+    const exchange = await this.exchangeManager.getExchange(masterPassword, exchangeId, accountLabel);
     return exchange.fetchClosedOrders(symbol, undefined, limit);
   }
 
@@ -370,18 +387,7 @@ export class OrderExecutor {
    * 过滤错误信息中的敏感内容（API Key、Secret、签名等）
    */
   static sanitizeError(err: any): string {
-    let msg = err.message ?? String(err);
-    // 移除可能的 API Key（通常为 16-64 位字母数字）
-    msg = msg.replace(/[A-Za-z0-9]{16,64}/g, (match: string) => {
-      // 保留常见的非敏感长字符串（如 URL path、hash 等）
-      if (/^(https?|wss?|ftp)/i.test(match)) return match;
-      return match.slice(0, 4) + '***';
-    });
-    // 移除可能的签名
-    msg = msg.replace(/signature[=:]\s*[^\s&'",}]+/gi, 'signature=***');
-    // 移除可能的 secret
-    msg = msg.replace(/secret[=:]\s*[^\s&'",}]+/gi, 'secret=***');
-    return msg;
+    return sanitizeErrorMessage(err);
   }
 
   /**
@@ -413,6 +419,41 @@ export class OrderExecutor {
       }
     } catch {
       // 部分交易所不支持动态设置杠杆，忽略
+    }
+  }
+
+  private validateOrderRequest(request: OrderRequest): void {
+    if (!request.exchange || !request.exchange.trim()) {
+      throw new Error('exchange 不能为空。');
+    }
+    if (!request.symbol || !request.symbol.includes('/')) {
+      throw new Error('symbol 格式无效，应类似 BTC/USDT。');
+    }
+    if (!Number.isFinite(request.amount) || request.amount <= 0) {
+      throw new Error('订单数量 amount 必须为大于 0 的有限数字。');
+    }
+
+    if (request.price !== undefined && (!Number.isFinite(request.price) || request.price <= 0)) {
+      throw new Error('价格 price 必须为大于 0 的有限数字。');
+    }
+    if (request.stopPrice !== undefined && (!Number.isFinite(request.stopPrice) || request.stopPrice <= 0)) {
+      throw new Error('触发价 stopPrice 必须为大于 0 的有限数字。');
+    }
+
+    if (request.type === 'limit' && request.price === undefined) {
+      throw new Error('限价单必须提供 price。');
+    }
+    if ((request.type === 'stop-loss' || request.type === 'take-profit') && request.stopPrice === undefined) {
+      throw new Error('止损/止盈单必须提供 stopPrice。');
+    }
+
+    if (request.leverage !== undefined) {
+      if (request.market !== 'futures') {
+        throw new Error('仅 futures 订单允许设置 leverage。');
+      }
+      if (!Number.isFinite(request.leverage) || request.leverage <= 0 || request.leverage > 125) {
+        throw new Error('leverage 必须是 1-125 的有限数字。');
+      }
     }
   }
 }
