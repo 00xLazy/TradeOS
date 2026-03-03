@@ -3,3 +3,4 @@ dist/
 *.db
 *.enc.json
 .env
+.DS_Store
