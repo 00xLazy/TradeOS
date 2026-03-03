@@ -1,7 +1,7 @@
 <div align="center">
   <img src="https://raw.githubusercontent.com/00xLazy/TradeOS/main/assets/logo.png" alt="TradeOS Logo" width="180" onerror="this.src='https://raw.githubusercontent.com/ccxt/ccxt/master/wiki/ccxt_logo.png';" />
 
-  # 🌌 TradeOS
+  #  TradeOS
   
   **The Ultimate AI-Powered CEX Trading & Portfolio Automation Skill for OpenClaw**
 
