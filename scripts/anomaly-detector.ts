@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ExchangeManager } from './exchange-manager.js';
 import { KeyVault } from './key-vault.js';
+import { sanitizeErrorMessage } from './security-utils.js';
 
 // ─── 类型定义 ───
 
@@ -288,6 +289,7 @@ export class AnomalyDetector {
    * API 连续失败检测
    */
   private async recordApiFailure(exchangeId: string, errorMessage: string): Promise<void> {
+    const sanitizedError = sanitizeErrorMessage(errorMessage);
     const count = (this.apiFailureCounts.get(exchangeId) ?? 0) + 1;
     this.apiFailureCounts.set(exchangeId, count);
 
@@ -295,11 +297,11 @@ export class AnomalyDetector {
       await this.emitWithCooldown(`api_failure:${exchangeId}`, {
         type: 'api_failure',
         severity: 'warning',
-        message: `API 异常：${exchangeId} 连续 ${count} 次 API 调用失败，最近错误：${errorMessage}。API Key 可能已过期或被禁用。`,
+        message: `API 异常：${exchangeId} 连续 ${count} 次 API 调用失败，最近错误：${sanitizedError}。API Key 可能已过期或被禁用。`,
         data: {
           exchangeId,
           consecutiveFailures: count,
-          lastError: errorMessage,
+          lastError: sanitizedError,
         },
         timestamp: Date.now(),
       });

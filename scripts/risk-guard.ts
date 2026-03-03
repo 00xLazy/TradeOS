@@ -70,6 +70,30 @@ export class RiskGuard {
     const warnings: string[] = [];
     let blocked = false;
 
+    if (!Number.isFinite(request.amount) || request.amount <= 0) {
+      reasons.push('订单数量无效（amount 必须为大于 0 的数字）');
+      blocked = true;
+    }
+
+    if (!Number.isFinite(estimatedCostUSD) || estimatedCostUSD <= 0) {
+      reasons.push('订单估值无效（无法计算有效成交金额）');
+      blocked = true;
+    }
+
+    if (!Number.isFinite(currentMarketPrice) || currentMarketPrice <= 0) {
+      warnings.push('当前市场价格无效，滑点保护可能失效，请谨慎下单');
+    }
+
+    if (blocked) {
+      return {
+        passed: false,
+        blocked: true,
+        reasons,
+        warnings,
+        requiresConfirmation: true,
+      };
+    }
+
     const normalizedSymbol = request.symbol.toUpperCase();
     // 1) 黑名单检查
     if (this.rules.blockedSymbols.includes(normalizedSymbol)) {

@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { KeyVault, type ExchangeCredential } from './key-vault.js';
 import { ExchangeManager } from './exchange-manager.js';
+import { sanitizeErrorMessage } from './security-utils.js';
 
 // ─── 类型定义 ───
 
@@ -333,7 +334,7 @@ export class SecurityReporter {
       return {
         name: 'API 连接状态',
         status: 'fail',
-        detail: `API 连接失败：${err.message}。Key 可能已过期或被禁用。`,
+        detail: `API 连接失败：${sanitizeErrorMessage(err)}。Key 可能已过期或被禁用。`,
         score: 0,
       };
     }

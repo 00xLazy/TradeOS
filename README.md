@@ -413,10 +413,12 @@ All data is stored locally on your machine:
 
 - Encrypts all API keys with AES-256-GCM before writing to disk
 - Rejects API keys that have withdrawal permissions
-- Requires explicit user confirmation before every trade (DCA plans are pre-authorized at creation)
+- Requires explicit user confirmation for manual trades (`previewOrder` -> one-time token -> `executeOrder`)
+- DCA/conditional automation is guarded by manual-approval hooks by default; plans/orders auto-pause if no approval handler is configured
 - Masks API keys in all logs and messages
 - Enforces configurable risk limits on every order
 - Sets file permissions to `600` (owner-only) on all data files
+- In multi-account setups on the same exchange, `accountLabel` must be specified explicitly to avoid routing orders to the wrong account
 
 ### What you should do
 

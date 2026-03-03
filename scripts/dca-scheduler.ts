@@ -2,7 +2,7 @@
  * dca-scheduler.ts - DCA 定投调度器
  *
  * 支持按小时/日/周/月周期自动定投，
- * 自动执行 previewOrder → executeOrder 流程（创建计划时已授权）。
+ * 自动执行 previewOrder → executeOrder 流程。
  */
 
 import crypto from 'node:crypto';
@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ExchangeManager } from './exchange-manager.js';
 import { OrderExecutor, type OrderRequest, type OrderResult } from './order-executor.js';
+import { sanitizeErrorMessage } from './security-utils.js';
 
 // ─── 类型定义 ───
 
@@ -21,6 +22,7 @@ export interface DcaPlan {
   id: string;
   name: string;
   exchangeId: string;
+  credentialLabel?: string;   // 多账户场景下指定凭证 label
   symbol: string;             // 如 'BTC/USDT'
   amountUSDT: number;         // 每次定投金额 (USDT)
   frequency: DcaFrequency;
@@ -65,6 +67,10 @@ export interface DcaEvent {
 }
 
 type DcaEventCallback = (event: DcaEvent) => void | Promise<void>;
+type DcaApprovalHandler = (context: {
+  plan: DcaPlan;
+  request: OrderRequest;
+}) => boolean | Promise<boolean>;
 
 // ─── DcaScheduler 类 ───
 
@@ -81,6 +87,8 @@ export class DcaScheduler {
   private callbacks: DcaEventCallback[] = [];
   private exchangeManager: ExchangeManager;
   private orderExecutor: OrderExecutor;
+  private requireManualApproval: boolean = true;
+  private approvalHandler: DcaApprovalHandler | null = null;
 
   constructor(
     dataDir: string,
@@ -142,6 +150,20 @@ export class DcaScheduler {
     return this.timeoutId !== null;
   }
 
+  /**
+   * 设置自动交易审批回调（建议由 Human-in-the-Loop 实现）
+   */
+  setApprovalHandler(handler: DcaApprovalHandler | null): void {
+    this.approvalHandler = handler;
+  }
+
+  /**
+   * 是否强制每次自动执行都经过人工审批
+   */
+  setRequireManualApproval(required: boolean): void {
+    this.requireManualApproval = required;
+  }
+
   // ─── 计划管理 ───
 
   /**
@@ -150,6 +172,7 @@ export class DcaScheduler {
   createPlan(config: {
     name: string;
     exchangeId: string;
+    credentialLabel?: string;
     symbol: string;
     amountUSDT: number;
     frequency: DcaFrequency;
@@ -166,6 +189,7 @@ export class DcaScheduler {
       id: crypto.randomUUID(),
       name: config.name,
       exchangeId: config.exchangeId,
+      credentialLabel: config.credentialLabel,
       symbol: config.symbol,
       amountUSDT: config.amountUSDT,
       frequency: config.frequency,
@@ -245,11 +269,14 @@ export class DcaScheduler {
     let currentPrice = 0;
     try {
       const ticker = await this.exchangeManager.getTicker(
-        masterPassword, plan.exchangeId, plan.symbol
+        masterPassword, plan.exchangeId, plan.symbol, plan.credentialLabel
       );
       currentPrice = ticker.last;
     } catch (err: any) {
-      console.warn(`[DcaScheduler] 无法从 ${plan.exchangeId} 获取 ${plan.symbol} 行情，无法计算盈亏:`, err.message);
+      console.warn(
+        `[DcaScheduler] 无法从 ${plan.exchangeId} 获取 ${plan.symbol} 行情，无法计算盈亏:`,
+        sanitizeErrorMessage(err)
+      );
     }
 
     const currentValue = plan.totalAcquired * currentPrice;
@@ -310,7 +337,7 @@ export class DcaScheduler {
     try {
       // 获取当前价格以计算买入数量
       const ticker = await this.exchangeManager.getTicker(
-        masterPassword, plan.exchangeId, plan.symbol
+        masterPassword, plan.exchangeId, plan.symbol, plan.credentialLabel
       );
       const currentPrice = ticker.last;
       if (currentPrice <= 0) throw new Error('无效的行情价格');
@@ -320,6 +347,7 @@ export class DcaScheduler {
       // 构建订单请求
       const request: OrderRequest = {
         exchange: plan.exchangeId,
+        accountLabel: plan.credentialLabel,
         symbol: plan.symbol,
         side: 'buy',
         type: 'market',
@@ -327,10 +355,11 @@ export class DcaScheduler {
         market: 'spot',
       };
 
-      // previewOrder → 获取 token → executeOrder
-      const preview = await this.orderExecutor.previewOrder(masterPassword, request);
-
-      if (preview.riskCheck.blocked) {
+      const approval = await this.requestExecutionApproval(plan, request);
+      if (!approval.approved) {
+        if (approval.pausePlan) {
+          plan.status = 'paused';
+        }
         record = {
           planId: plan.id,
           timestamp: Date.now(),
@@ -338,29 +367,13 @@ export class DcaScheduler {
           amountUSDT: plan.amountUSDT,
           price: currentPrice,
           acquired: 0,
-          error: `风控拦截: ${preview.riskCheck.reasons.join('; ')}`,
+          error: approval.reason,
         };
       } else {
-        const result: OrderResult = await this.orderExecutor.executeOrder(
-          masterPassword, preview.confirmationToken
-        );
+        // previewOrder → 获取 token → executeOrder
+        const preview = await this.orderExecutor.previewOrder(masterPassword, request);
 
-        if (result.success) {
-          record = {
-            planId: plan.id,
-            timestamp: Date.now(),
-            status: 'success',
-            amountUSDT: result.cost || plan.amountUSDT,
-            price: result.price,
-            acquired: result.amount,
-            orderId: result.orderId,
-          };
-
-          // 更新计划统计
-          plan.totalExecutions++;
-          plan.totalSpentUSDT += record.amountUSDT;
-          plan.totalAcquired += record.acquired;
-        } else {
+        if (preview.riskCheck.blocked) {
           record = {
             planId: plan.id,
             timestamp: Date.now(),
@@ -368,8 +381,39 @@ export class DcaScheduler {
             amountUSDT: plan.amountUSDT,
             price: currentPrice,
             acquired: 0,
-            error: result.error,
+            error: `风控拦截: ${preview.riskCheck.reasons.join('; ')}`,
           };
+        } else {
+          const result: OrderResult = await this.orderExecutor.executeOrder(
+            masterPassword, preview.confirmationToken
+          );
+
+          if (result.success) {
+            record = {
+              planId: plan.id,
+              timestamp: Date.now(),
+              status: 'success',
+              amountUSDT: result.cost || plan.amountUSDT,
+              price: result.price,
+              acquired: result.amount,
+              orderId: result.orderId,
+            };
+
+            // 更新计划统计
+            plan.totalExecutions++;
+            plan.totalSpentUSDT += record.amountUSDT;
+            plan.totalAcquired += record.acquired;
+          } else {
+            record = {
+              planId: plan.id,
+              timestamp: Date.now(),
+              status: 'failed',
+              amountUSDT: plan.amountUSDT,
+              price: currentPrice,
+              acquired: 0,
+              error: result.error,
+            };
+          }
         }
       }
     } catch (err: any) {
@@ -380,7 +424,7 @@ export class DcaScheduler {
         amountUSDT: plan.amountUSDT,
         price: 0,
         acquired: 0,
-        error: err.message ?? String(err),
+        error: sanitizeErrorMessage(err),
       };
     }
 
@@ -409,6 +453,39 @@ export class DcaScheduler {
       message,
       timestamp: Date.now(),
     });
+  }
+
+  private async requestExecutionApproval(
+    plan: DcaPlan,
+    request: OrderRequest
+  ): Promise<{ approved: boolean; reason?: string; pausePlan?: boolean }> {
+    if (!this.requireManualApproval) {
+      return { approved: true };
+    }
+
+    if (!this.approvalHandler) {
+      return {
+        approved: false,
+        pausePlan: true,
+        reason: '未配置人工审批回调，已自动暂停该定投计划。',
+      };
+    }
+
+    try {
+      const approved = await this.approvalHandler({
+        plan: { ...plan },
+        request: { ...request },
+      });
+      if (!approved) {
+        return { approved: false, reason: '本次定投未通过人工审批。' };
+      }
+      return { approved: true };
+    } catch (err: any) {
+      return {
+        approved: false,
+        reason: `人工审批流程异常：${sanitizeErrorMessage(err)}`,
+      };
+    }
   }
 
   // ─── 时间计算 ───

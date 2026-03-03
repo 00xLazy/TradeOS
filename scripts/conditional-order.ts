@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ExchangeManager } from './exchange-manager.js';
 import { OrderExecutor, type OrderRequest, type OrderResult } from './order-executor.js';
+import { sanitizeErrorMessage } from './security-utils.js';
 
 // ─── 类型定义 ───
 
@@ -21,6 +22,7 @@ export interface ConditionalOrder {
   id: string;
   name: string;
   exchangeId: string;
+  credentialLabel?: string;   // 多账户场景下指定凭证 label
   symbol: string;
   condition: {
     type: ConditionType;
@@ -65,6 +67,10 @@ export interface ConditionalOrderEvent {
 }
 
 type ConditionalOrderEventCallback = (event: ConditionalOrderEvent) => void | Promise<void>;
+type ConditionalOrderApprovalHandler = (context: {
+  order: ConditionalOrder;
+  request: OrderRequest;
+}) => boolean | Promise<boolean>;
 
 // ─── 常量 ───
 
@@ -83,6 +89,8 @@ export class ConditionalOrderManager {
   private callbacks: ConditionalOrderEventCallback[] = [];
   private exchangeManager: ExchangeManager;
   private orderExecutor: OrderExecutor;
+  private requireManualApproval: boolean = true;
+  private approvalHandler: ConditionalOrderApprovalHandler | null = null;
 
   constructor(
     dataDir: string,
@@ -133,11 +141,26 @@ export class ConditionalOrderManager {
     return this.timeoutId !== null;
   }
 
+  /**
+   * 设置自动交易审批回调（建议由 Human-in-the-Loop 实现）
+   */
+  setApprovalHandler(handler: ConditionalOrderApprovalHandler | null): void {
+    this.approvalHandler = handler;
+  }
+
+  /**
+   * 是否强制每次自动触发都经过人工审批
+   */
+  setRequireManualApproval(required: boolean): void {
+    this.requireManualApproval = required;
+  }
+
   // ─── 条件单管理 ───
 
   createOrder(config: {
     name: string;
     exchangeId: string;
+    credentialLabel?: string;
     symbol: string;
     condition: {
       type: ConditionType;
@@ -173,6 +196,7 @@ export class ConditionalOrderManager {
       id: crypto.randomUUID(),
       name: config.name,
       exchangeId: config.exchangeId,
+      credentialLabel: config.credentialLabel,
       symbol: config.symbol,
       condition: { ...config.condition },
       order: { ...config.order },
@@ -272,7 +296,7 @@ export class ConditionalOrderManager {
       let currentPrice: number;
       try {
         const ticker = await this.exchangeManager.getTicker(
-          masterPassword, order.exchangeId, order.symbol
+          masterPassword, order.exchangeId, order.symbol, order.credentialLabel
         );
         currentPrice = ticker.last;
         if (currentPrice <= 0) continue;
@@ -327,6 +351,7 @@ export class ConditionalOrderManager {
     try {
       const request: OrderRequest = {
         exchange: order.exchangeId,
+        accountLabel: order.credentialLabel,
         symbol: order.symbol,
         side: order.order.side,
         type: order.order.type,
@@ -336,37 +361,51 @@ export class ConditionalOrderManager {
         leverage: order.order.leverage,
       };
 
-      const preview = await this.orderExecutor.previewOrder(masterPassword, request);
-
-      if (preview.riskCheck.blocked) {
+      const approval = await this.requestExecutionApproval(order, request);
+      if (!approval.approved) {
+        if (approval.pauseOrder) {
+          order.status = 'paused';
+        }
         execution = {
           orderId: order.id,
           timestamp: Date.now(),
           status: 'failed',
           price: triggerPrice,
-          error: `风控拦截: ${preview.riskCheck.reasons.join('; ')}`,
+          error: approval.reason,
         };
       } else {
-        const result = await this.orderExecutor.executeOrder(
-          masterPassword, preview.confirmationToken
-        );
+        const preview = await this.orderExecutor.previewOrder(masterPassword, request);
 
-        if (result.success) {
-          execution = {
-            orderId: order.id,
-            timestamp: Date.now(),
-            status: 'success',
-            price: triggerPrice,
-            orderResult: result,
-          };
-        } else {
+        if (preview.riskCheck.blocked) {
           execution = {
             orderId: order.id,
             timestamp: Date.now(),
             status: 'failed',
             price: triggerPrice,
-            error: result.error,
+            error: `风控拦截: ${preview.riskCheck.reasons.join('; ')}`,
           };
+        } else {
+          const result = await this.orderExecutor.executeOrder(
+            masterPassword, preview.confirmationToken
+          );
+
+          if (result.success) {
+            execution = {
+              orderId: order.id,
+              timestamp: Date.now(),
+              status: 'success',
+              price: triggerPrice,
+              orderResult: result,
+            };
+          } else {
+            execution = {
+              orderId: order.id,
+              timestamp: Date.now(),
+              status: 'failed',
+              price: triggerPrice,
+              error: result.error,
+            };
+          }
         }
       }
     } catch (err: any) {
@@ -375,14 +414,14 @@ export class ConditionalOrderManager {
         timestamp: Date.now(),
         status: 'failed',
         price: triggerPrice,
-        error: err.message ?? String(err),
+        error: sanitizeErrorMessage(err),
       };
     }
 
     // 更新条件单状态
     order.totalTriggers++;
     order.lastTriggeredAt = Date.now();
-    if (order.triggerMode === 'once') {
+    if (order.triggerMode === 'once' && execution.status === 'success') {
       order.status = 'triggered';
     }
 
@@ -406,6 +445,39 @@ export class ConditionalOrderManager {
       message,
       timestamp: Date.now(),
     });
+  }
+
+  private async requestExecutionApproval(
+    order: ConditionalOrder,
+    request: OrderRequest
+  ): Promise<{ approved: boolean; reason?: string; pauseOrder?: boolean }> {
+    if (!this.requireManualApproval) {
+      return { approved: true };
+    }
+
+    if (!this.approvalHandler) {
+      return {
+        approved: false,
+        pauseOrder: true,
+        reason: '未配置人工审批回调，已自动暂停该条件单。',
+      };
+    }
+
+    try {
+      const approved = await this.approvalHandler({
+        order: { ...order },
+        request: { ...request },
+      });
+      if (!approved) {
+        return { approved: false, reason: '本次条件单触发未通过人工审批。' };
+      }
+      return { approved: true };
+    } catch (err: any) {
+      return {
+        approved: false,
+        reason: `人工审批流程异常：${sanitizeErrorMessage(err)}`,
+      };
+    }
   }
 
   // ─── 历史记录 ───
