@@ -1,0 +1,43 @@
+name: Bug Report
+description: Create a report to help us improve TradeOS
+title: "[BUG] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report for TradeOS! 👾
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+      placeholder: What happened during the trade or vault operation?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this bug?
+      placeholder: |
+        1. Told OpenClaw to '...'
+        2. Expected TradeOS to '...'
+        3. See error '...'
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node version, CCXT version, OpenClaw version
+      placeholder: e.g., macOS, Node 20, CCXT 4.5.x
+    validations:
+      required: true

@@ -1,377 +1,107 @@
-# TradeOS
+<div align="center">
+  <img src="https://raw.githubusercontent.com/00xLazy/TradeOS/main/assets/logo.png" alt="TradeOS Logo" width="180" onerror="this.src='https://raw.githubusercontent.com/ccxt/ccxt/master/wiki/ccxt_logo.png';" />
 
-**An OpenClaw Skill for centralized exchange trading, DCA automation, conditional orders, arbitrage scanning, anomaly detection & security reporting.**
+  # 🌌 TradeOS
+  
+  **The Ultimate AI-Powered CEX Trading & Portfolio Automation Skill for OpenClaw**
 
-Trade on 100+ cryptocurrency exchanges via natural language. Manage API keys securely, automate dollar-cost averaging, set conditional orders, monitor cross-exchange arbitrage opportunities, track funding rate yields, detect account anomalies, and manage your entire portfolio — all from your OpenClaw chat interface.
+  <p align="center">
+    <a href="https://github.com/00xLazy/TradeOS/releases"><img src="https://img.shields.io/github/v/release/00xLazy/TradeOS?style=for-the-badge&color=6366f1" alt="Release"></a>
+    <a href="https://github.com/ccxt/ccxt"><img src="https://img.shields.io/badge/Powered_by-CCXT-F3B05A?style=for-the-badge&logo=javascript&logoColor=white" alt="CCXT"></a>
+    <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"></a>
+    <a href="https://github.com/00xLazy/TradeOS/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-success?style=for-the-badge" alt="License"></a>
+  </p>
 
-[中文文档](./README_CN.md)
+  <p align="center">
+    Trade on 100+ cryptocurrency exchanges via natural language. Manage API keys securely, automate dollar-cost averaging, set conditional orders, monitor cross-exchange arbitrage opportunities, track funding rate yields, and manage your entire portfolio.
+  </p>
 
----
-
-## Features
-
-### Secure API Key Management
-- AES-256-GCM encryption with PBKDF2-derived keys (600K iterations)
-- Automatically rejects API keys with withdrawal permissions
-- Credentials stored locally at `~/.openclaw/skills/TradeOS/vault/`
-- API keys are always masked in logs and chat messages
-
-### Multi-Exchange Trading
-- Powered by [CCXT](https://github.com/ccxt/ccxt) — supports **100+ exchanges** with a unified API
-- Order types: Market, Limit, Stop-Loss, Take-Profit
-- Spot and Futures trading with leverage control
-- **Mandatory preview + confirmation** before every trade execution
-
-### DCA (Dollar-Cost Averaging)
-- Create automated buy plans: **hourly / daily / weekly / monthly**
-- Configurable amount per execution (in USDT)
-- Automatic `previewOrder → executeOrder` flow (pre-authorized at plan creation)
-- Risk guard still enforced on every execution
-- Track average buy price, total invested, unrealized PnL per plan
-- Full execution history with success/failure records
-
-### Cross-Exchange Arbitrage Scanner
-- Real-time price comparison across multiple exchanges
-- Uses **ask/bid prices** (not last price) for realistic spread calculation
-- Alerts when net profit exceeds threshold (default 0.5% after double-sided fees)
-- Configurable fee estimation and alert cooldown
-- **Alert only** — does not auto-trade
-
-### Funding Rate Monitor
-- Monitors perpetual contract funding rates across exchanges
-- Calculates **annualized yield** from current funding rate
-- Alerts when annualized rate exceeds threshold (default 30%)
-- Suggests direction: positive rate → short to collect; negative rate → long to collect
-- **Alert only** — does not auto-trade
-
-### Conditional Orders
-- Set price-triggered orders: buy/sell when price reaches a target
-- Condition types: price above/below, price change up/down (percentage-based)
-- Trigger modes: **once** (single execution) or **recurring** (with cooldown)
-- Optional expiration time for time-limited orders
-- Automatic `previewOrder → executeOrder` flow (pre-authorized at creation)
-- Risk guard enforced on every trigger
-- Full execution history tracking
-
-### Anomaly Detection
-- **Balance drop alert** — critical alert when total portfolio drops significantly within a short window (default 10% in 5 minutes)
-- **Unknown order alert** — warning when unusual order activity is detected on an exchange
-- **API failure alert** — warning when consecutive API calls fail (possible key expiration or ban)
-- Configurable thresholds and cooldown periods
-- Balance snapshots persisted for cross-restart comparison
-
-### Security Reports
-- Periodic security audit of all configured API keys (default every 24 hours)
-- **100-point scoring system** per exchange:
-  - API Key age (25 pts) — warns after 90 days, critical after 180 days
-  - Withdrawal permission (25 pts) — fails if withdrawal is detected
-  - IP whitelist (25 pts) — warns if not configured
-  - API connection status (25 pts) — fails if connection is down
-- Actionable recommendations generated automatically
-- Manual report generation available on demand
-
-### Risk Management
-- Per-order value limit (default $10,000)
-- Daily cumulative volume limit (default $50,000)
-- Maximum leverage cap (default 10x)
-- Cooldown period between trades on the same pair
-- Blocked symbol blacklist
-- All rules fully customizable
-
-### Portfolio Tracking
-- Multi-exchange aggregated balance overview
-- USD valuation for all holdings
-- Historical snapshots stored in SQLite
-- Daily summary and net value curve
-
-### Balance Monitoring & Alerts
-- **Price alerts** — notify when a coin crosses a price level
-- **Balance change alerts** — notify when a coin balance changes significantly
-- **Portfolio drawdown/gain alerts** — notify on significant portfolio movements
-- Configurable cooldown to prevent alert spam
-
-### PnL Reporting
-- Generate reports by period: 1 day / 7 days / 30 days / 90 days
-- Breakdown by asset with individual change tracking
-- Trade statistics: total trades, win rate, fees paid
-- Formatted text output ready for chat display
+  [English](./README.md) • [简体中文](./README_CN.md)
+</div>
 
 ---
 
-## Supported Exchanges
+## ✨ Enterprise-Grade Features
 
-Out of the box, TradeOS is configured for these popular exchanges:
+### 🛡️ Fort Knox Security (Vault)
+- **Zero-Trust Storage:** AES-256-GCM encryption with PBKDF2-derived keys (600K iterations).
+- **Withdrawal Protection:** Automatically rejects and blocks API keys with withdrawal permissions.
+- **Local Isolation:** Credentials stored locally at `~/.openclaw/skills/TradeOS/vault/`. No cloud syncing.
+- **Data Masking:** API keys are universally masked in all logs and AI chat histories.
 
-| Exchange | ID |
-|----------|-----|
-| Binance | `binance` |
-| OKX | `okx` |
-| Bybit | `bybit` |
-| Gate.io | `gateio` |
-| Bitget | `bitget` |
-| Coinbase | `coinbase` |
-| KuCoin | `kucoin` |
-| HTX (Huobi) | `htx` |
-| MEXC | `mexc` |
-| Crypto.com | `cryptocom` |
+### 🌐 Omni-Exchange Engine
+- **Powered by CCXT:** Instant access to **100+ exchanges** (Binance, Bybit, OKX, Kraken, etc.) via a unified API.
+- **Advanced Routing:** Market, Limit, Stop-Loss, and Take-Profit orders.
+- **Derivatives Ready:** Spot and Futures trading with dynamic leverage control.
+- **Safety First:** Mandatory `preview + confirmation` flow before *any* live trade execution.
 
-Since TradeOS is built on CCXT, any of the 100+ supported exchanges can be added.
+### 🤖 Smart Automation (DCA & Algos)
+- **Dollar-Cost Averaging (DCA):** Create autonomous buy plans (Hourly / Daily / Weekly / Monthly).
+- **Seamless Execution:** Automatic `previewOrder → executeOrder` pipeline (pre-authorized at creation).
+- **Deep Analytics:** Track average buy prices, total invested capital, and unrealized PnL per strategy.
+
+### 🔭 Market Intelligence
+- **Cross-Exchange Arbitrage:** Real-time ask/bid spread calculation across venues. Alerts on net-profit thresholds.
+- **Funding Rate Monitor:** Scans perpetual contract funding rates, calculating annualized yields. Spot lucrative long/short yield-farming opportunities.
+
+### ⚡ Conditional Execution
+- **Trigger-based Orders:** Buy or sell when assets hit strict price targets or percentage changes.
+- **Flexible Modes:** 'Once-off' execution or 'Recurring' cycles with customizable cooldowns.
 
 ---
 
-## Installation
+## 🚀 Quick Start
 
-### Prerequisites
+### 1. Installation
 
-- [OpenClaw](https://github.com/openclaw/openclaw) installed and running
-- Node.js >= 22
-
-### Install the Skill
+Since TradeOS is an OpenClaw Skill, you can install it directly into your OpenClaw environment:
 
 ```bash
-# Clone the repository
+# Clone the repository into your skills directory
 git clone https://github.com/00xLazy/TradeOS.git ~/.openclaw/skills/TradeOS
 
-# Install dependencies
+# Navigate to the directory
 cd ~/.openclaw/skills/TradeOS
+
+# Install dependencies
 npm install
+
+# Build the skill
+npm run build
 ```
 
-OpenClaw will automatically detect the `SKILL.md` and load the skill.
+### 2. Configuration & Initialization
+
+Start your OpenClaw interface and say:
+> *"Load the TradeOS skill."*
+
+Once loaded, initialize your secure vault:
+> *"Initialize my TradeOS vault with the password 'my-super-secret-password'."*
+
+### 3. Adding Exchange Keys
+
+To connect an exchange (e.g., Binance), ensure the API key **does not have withdrawal permissions**, then ask OpenClaw:
+> *"Add my Binance API key. The key is XXX and the secret is YYY."*
+
+*(TradeOS will encrypt and store this locally. It will test the connection and verify permission scopes before saving.)*
 
 ---
 
-## Usage
+## 💬 Example Prompts
 
-Once installed, interact with TradeOS through your OpenClaw chat interface (Telegram, Discord, WhatsApp, etc.).
+Talk to OpenClaw naturally to manage your portfolio:
 
-### Add an Exchange API Key
-
-```
-You:   Add my Binance API key
-Agent: Please provide your API Key and Secret.
-       Security reminder: only grant "trade" permission — never enable "withdraw".
-
-You:   API Key is xxxxx, Secret is yyyyy
-Agent: Encrypted and stored. Detected permissions: spot, futures. No withdrawal — safe.
-```
-
-### Check Balances
-
-```
-You:   Show me my assets
-Agent:
-       Asset Overview
-       ──────────────
-       Binance:  $45,230 (0.3 BTC, 5 ETH, 10000 USDT)
-       OKX:      $12,800 (2 SOL, 8000 USDT)
-       ──────────────
-       Total: $58,030
-       Distribution: BTC 42% | ETH 20% | USDT 31% | SOL 7%
-```
-
-### Place a Trade
-
-```
-You:   Buy 0.1 BTC on Binance
-Agent:
-       Order Confirmation
-       ──────────────
-       Exchange: Binance
-       Pair:     BTC/USDT
-       Side:     Buy
-       Type:     Market
-       Amount:   0.1 BTC
-       Price:    $84,302
-       Est Cost: $8,430.20
-       Est Fee:  $8.43
-       ──────────────
-       Reply "confirm" to execute.
-
-You:   Confirm
-Agent: Filled. Avg price $84,302.50, amount 0.1 BTC, fee 0.0001 BTC.
-```
-
-### Set Up DCA
-
-```
-You:   Set up a daily DCA plan to buy $100 of BTC on Binance at 9am
-Agent:
-       DCA Plan Created
-       ──────────────
-       Name:      Daily BTC DCA
-       Exchange:  Binance
-       Pair:      BTC/USDT
-       Amount:    $100/day
-       Time:      09:00 daily
-       Status:    Active
-       Next Run:  Tomorrow 09:00
-
-You:   Show me my DCA plan summary
-Agent:
-       DCA Plan: Daily BTC DCA
-       ──────────────
-       Exchange: Binance | Pair: BTC/USDT
-       Amount: $100/day | Next: Tomorrow 09:00
-       Total Invested: $3,000 | Acquired: 0.035 BTC
-       Avg Price: $85,714 | Current: $87,200
-       Unrealized PnL: +$52 (+1.73%)
-```
-
-### Arbitrage Scanning
-
-```
-You:   Scan for arbitrage opportunities on BTC
-Agent:
-       Arbitrage Opportunity
-       ──────────────
-       BTC/USDT
-       Buy on OKX:      $84,200 (ask)
-       Sell on Binance:  $84,650 (bid)
-       Spread: 0.53%
-       Net Profit: 0.33% (after 0.1% x2 fees)
-```
-
-### Funding Rate Monitor
-
-```
-You:   Check BTC funding rates
-Agent:
-       BTC/USDT:USDT Funding Rates
-       ──────────────
-       Binance:  0.0350% (8h) → Annualized 38.3%
-       OKX:      0.0280% (8h) → Annualized 30.7%
-       Bybit:    0.0150% (8h) → Annualized 16.4%
-
-       Opportunity: Binance rate is high.
-       Suggestion: Short BTC perpetual to collect funding from longs.
-```
-
-### Conditional Orders
-
-```
-You:   Buy 0.01 BTC if it drops below $80,000
-Agent:
-       Conditional Order Created
-       ──────────────
-       Name:      BTC price below $80,000 buy
-       Exchange:  Binance
-       Pair:      BTC/USDT
-       Condition: Price falls below $80,000
-       Action:    Market buy 0.01 BTC
-       Mode:      Once
-       Status:    Active (checking every 15s)
-
-You:   Show my conditional orders
-Agent:
-       Active Conditional Orders
-       ──────────────
-       1. BTC price below $80,000 buy — Active, 0 triggers
-       2. ETH up 5% sell — Active, 2 triggers
-```
-
-### Security Report
-
-```
-You:   Run a security check on my API keys
-Agent:
-       Security Report
-       ──────────────
-       Overall Score: 85/100 — Good
-
-       Binance:  90/100
-         ✓ API Key age: 45 days
-         ✓ No withdrawal permission
-         ✓ IP whitelist configured (2 IPs)
-         ✓ API connection OK
-
-       OKX:      80/100
-         ✓ API Key age: 45 days
-         ✓ No withdrawal permission
-         ⚠ No IP whitelist configured
-         ✓ API connection OK
-
-       Recommendations:
-         - OKX: Set up IP whitelist in exchange settings
-```
-
-### Set Price Alert
-
-```
-You:   Alert me if BTC drops below $80,000
-Agent: Price alert set: BTC < $80,000 — will notify via Telegram.
-```
-
-### Check PnL
-
-```
-You:   How much did I make this week?
-Agent:
-       Weekly Report
-       ────────────────────
-       Start:   $58,200
-       Current: $61,530
-       PnL:     +$3,330 (+5.72%)
-       ────────────────────
-       By asset:
-         BTC: +$2,100
-         ETH: +$890
-         SOL: +$340
-       ────────────────────
-       Trades: 12 | Win rate: 66.7% | Fees: $23.50
-```
+* **Trading:** *"Buy $500 worth of BTC on Binance at market price."*
+* **DCA:** *"Set up a daily DCA plan to buy $50 of ETH on Bybit."*
+* **Arbitrage:** *"Scan for arbitrage opportunities between OKX and Binance for SOL/USDT."*
+* **Yield Farming:** *"What are the current highest funding rates for perp contracts?"*
+* **Portfolio:** *"Show me my total balance across all connected exchanges."*
 
 ---
 
-## Project Structure
+## 🏗️ Architecture & Storage
 
-```
-TradeOS/
-├── SKILL.md                         # OpenClaw skill descriptor
-├── package.json                     # Dependencies (ccxt, better-sqlite3)
-├── tsconfig.json
-└── scripts/
-    ├── index.ts                     # Entry point — initializes all modules
-    ├── key-vault.ts                 # API key encrypted storage (AES-256-GCM)
-    ├── exchange-manager.ts          # CCXT multi-exchange connection manager
-    ├── order-executor.ts            # Order execution engine
-    ├── risk-guard.ts                # Risk management module
-    ├── portfolio-tracker.ts         # Portfolio snapshots & history (SQLite)
-    ├── balance-monitor.ts           # Balance monitoring & alert rules
-    ├── pnl-tracker.ts               # PnL tracking & report generation
-    ├── dca-scheduler.ts             # DCA automated buy scheduler
-    ├── arbitrage-scanner.ts         # Cross-exchange arbitrage scanner
-    ├── funding-rate-monitor.ts      # Funding rate monitoring & alerts
-    ├── conditional-order.ts         # Conditional/trigger order manager
-    ├── anomaly-detector.ts          # Account anomaly detection & alerts
-    └── security-reporter.ts         # Periodic security audit & reporting
-```
-
-### Module Overview
-
-| Module | Responsibility |
-|--------|---------------|
-| `key-vault` | AES-256-GCM encrypted API key storage, PBKDF2 key derivation, withdrawal permission rejection |
-| `exchange-manager` | Unified multi-exchange interface via CCXT, balance queries, ticker data, market aggregation |
-| `order-executor` | Market/limit/stop-loss/take-profit orders, mandatory preview + confirm flow, leverage control |
-| `risk-guard` | Per-order limits, daily volume caps, max leverage, cooldown periods, symbol blacklist |
-| `portfolio-tracker` | SQLite-based asset snapshots, historical comparison, net value curves, daily summaries |
-| `balance-monitor` | Alert types (price/balance/drawdown/gain/margin/transfer), polling-based monitoring |
-| `pnl-tracker` | Period-based PnL reports (1d/7d/30d/90d), per-asset breakdown, trade statistics |
-| `dca-scheduler` | Automated DCA plans (hourly/daily/weekly/monthly), execution history, PnL tracking per plan |
-| `arbitrage-scanner` | Cross-exchange price spread detection, ask/bid comparison, configurable profit threshold alerts |
-| `funding-rate-monitor` | Perpetual funding rate monitoring, annualized yield calculation, directional suggestions |
-| `conditional-order` | Price-triggered conditional orders, once/recurring modes, auto-execution with risk guard |
-| `anomaly-detector` | Balance drop detection, unknown order alerts, API failure tracking, configurable thresholds |
-| `security-reporter` | Periodic API key security audits, 100-point scoring, actionable recommendations |
-
----
-
-## Data Storage
-
-All data is stored locally on your machine:
-
-```
+```text
 ~/.openclaw/skills/TradeOS/
 ├── vault/
 │   └── exchanges.enc.json    # Encrypted API keys
@@ -399,29 +129,18 @@ All data is stored locally on your machine:
 └── risk-rules.json           # Risk management rules
 ```
 
-- **No data leaves your machine** — everything runs locally
-- API keys encrypted with AES-256-GCM
-- SQLite databases for efficient local storage
-- All config/data files set to `chmod 600` (owner-only)
-- `.gitignore` excludes all sensitive files (`*.enc.json`, `*.db`)
-
 ---
 
-## Security
+## 🔒 Security Best Practices
 
 ### What TradeOS does
-
 - Encrypts all API keys with AES-256-GCM before writing to disk
 - Rejects API keys that have withdrawal permissions
-- Requires explicit user confirmation for manual trades (`previewOrder` -> one-time token -> `executeOrder`)
-- DCA/conditional automation is guarded by manual-approval hooks by default; plans/orders auto-pause if no approval handler is configured
+- Requires explicit user confirmation for manual trades
 - Masks API keys in all logs and messages
-- Enforces configurable risk limits on every order
 - Sets file permissions to `600` (owner-only) on all data files
-- In multi-account setups on the same exchange, `accountLabel` must be specified explicitly to avoid routing orders to the wrong account
 
 ### What you should do
-
 - **Never grant withdrawal permissions** to your API keys
 - **Set IP whitelists** on your exchange API keys
 - Use a **strong master password** for the key vault
@@ -430,14 +149,14 @@ All data is stored locally on your machine:
 
 ---
 
-## License
-
-[MIT](./LICENSE)
-
----
-
-## Acknowledgments
+## 📜 Acknowledgments & License
 
 - [OpenClaw](https://github.com/openclaw/openclaw) — the open-source AI agent platform
 - [CCXT](https://github.com/ccxt/ccxt) — unified cryptocurrency exchange API
 - [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) — fast, synchronous SQLite for Node.js
+
+[MIT License](./LICENSE) © 2024 00xLazy
+
+<div align="center">
+  <p>Built for the decentralized future. Trade responsibly.</p>
+</div>
