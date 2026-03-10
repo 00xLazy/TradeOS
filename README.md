@@ -416,6 +416,67 @@ All data is stored **locally on your machine**. Nothing is transmitted to extern
 <div align="center">
 <br />
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
+
+## Skill Combo: TradeOS + CoinAnk
+
+</div>
+
+<div align="center">
+
+Install both **TradeOS** and [**CoinAnk API Skill**](https://github.com/coinank/coinank-openapi-skill) in OpenClaw to unlock a complete **"see the market + execute trades"** closed loop.
+
+</div>
+
+<div align="center">
+<table>
+<tr>
+<td width="50%">
+
+**CoinAnk = Eyes**
+
+18 categories, 59 real-time derivatives data endpoints: K-lines, liquidation heatmaps, funding rates, long/short ratios, order flow, whale movements, fear & greed index, and more.
+
+</td>
+<td width="50%">
+
+**TradeOS = Hands**
+
+100+ exchanges, market/limit/stop/TP orders, DCA automation, conditional orders, cross-exchange arbitrage scanning — all with built-in risk controls and confirmation gates.
+
+</td>
+</tr>
+</table>
+</div>
+
+<div align="center">
+
+Combine both, and a single sentence does what used to require multiple screens:
+
+</div>
+
+```
+"Check BTC funding rates and the liquidation heatmap. If the rate exceeds 0.1%
+ and the long/short ratio is skewed long, open a 2x short on Binance."
+
+"Monitor ETH order flow. When a large sell signal appears,
+ market-sell all my ETH automatically."
+
+"Compare SOL funding rates across exchanges. Find the arb opportunity,
+ then go long on the lowest-rate exchange and short on the highest."
+
+"Every morning, send me a report: yesterday's BTC liquidation data
+ + whale movements + my portfolio PnL."
+
+"Use the Fear & Greed Index for DCA: buy $100 BTC daily when the index
+ drops below 20, pause when it rises above 80."
+```
+
+<div align="center">
+
+One Skill watches. The other executes. Data-driven decisions, AI-powered trades.
+
+<br />
+<img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
 </div>
 
 <details>

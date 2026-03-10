@@ -425,6 +425,66 @@ TradeOS: 条件单已创建
 <div align="center">
 <br />
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
+
+## Skill 组合：TradeOS + CoinAnk
+
+</div>
+
+<div align="center">
+
+在 OpenClaw 中同时安装 **TradeOS** 和 [**CoinAnk API Skill**](https://github.com/coinank/coinank-openapi-skill)，即可获得完整的**「看见市场 + 执行交易」**闭环能力。
+
+</div>
+
+<div align="center">
+<table>
+<tr>
+<td width="50%">
+
+**CoinAnk = 眼睛**
+
+18 大类、59 个实时衍生品数据接口：K 线、清算热力图、资金费率、多空比、订单流、鲸鱼动向、恐惧贪婪指数等。
+
+</td>
+<td width="50%">
+
+**TradeOS = 双手**
+
+100+ 家交易所，市价/限价/止损/止盈下单，DCA 定投，条件单，跨所套利扫描——所有操作均内置风控和二次确认。
+
+</td>
+</tr>
+</table>
+</div>
+
+<div align="center">
+
+两者结合，一句话完成过去需要盯多个屏幕才能做到的事：
+
+</div>
+
+```
+「查一下 BTC 当前的资金费率和清算热力图，如果费率超过 0.1%
+  且多空比偏向多头，帮我在币安开一个 2x 空单」
+
+「监控 ETH 的订单流，出现大额卖单信号时自动市价卖出我持有的 ETH」
+
+「对比各交易所 SOL 的资金费率，找到套利机会后
+  在费率最低的所做多、最高的所做空」
+
+「每天早上给我一份报告：昨日 BTC 爆仓数据
+  + 鲸鱼动向 + 我的持仓盈亏」
+
+「用恐惧贪婪指数做定投策略：指数低于 20 时每天买 100 美元 BTC，
+  高于 80 时暂停」
+```
+
+<div align="center">
+
+一个负责看，一个负责做。数据驱动决策，AI 执行交易。
+
+<br />
+<img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
 </div>
 
 <details>
