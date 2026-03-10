@@ -1,51 +1,111 @@
 <div align="center">
 
-# TradeOS
+```
+████████╗██████╗  █████╗ ██████╗ ███████╗ ██████╗ ███████╗
+╚══██╔══╝██╔══██╗██╔══██╗██╔══██╗██╔════╝██╔═══██╗██╔════╝
+   ██║   ██████╔╝███████║██║  ██║█████╗  ██║   ██║███████╗
+   ██║   ██╔══██╗██╔══██║██║  ██║██╔══╝  ██║   ██║╚════██║
+   ██║   ██║  ██║██║  ██║██████╔╝███████╗╚██████╔╝███████║
+   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝ ╚═════╝ ╚══════╝
+```
 
-**Institutional-grade CEX trading infrastructure for AI agents**
+### `> Institutional-grade CEX trading infrastructure for AI agents_`
 
 <br />
 
-[![Version](https://img.shields.io/badge/version-0.4.0-1a1a2e?style=flat)](https://github.com/00xLazy/TradeOS/releases)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-1a1a2e?style=flat&logo=typescript&logoColor=3178c6)](https://www.typescriptlang.org/)
-[![CCXT](https://img.shields.io/badge/CCXT-100%2B%20exchanges-1a1a2e?style=flat)](https://github.com/ccxt/ccxt)
-[![License](https://img.shields.io/badge/license-MIT-1a1a2e?style=flat)](./LICENSE)
+[![Version](https://img.shields.io/badge/v0.4.0-blueviolet?style=for-the-badge&logo=semver&logoColor=white)](https://github.com/00xLazy/TradeOS/releases)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![CCXT](https://img.shields.io/badge/CCXT-100%2B_Exchanges-00d4aa?style=for-the-badge&logo=bitcoin&logoColor=white)](https://github.com/ccxt/ccxt)
+[![License](https://img.shields.io/badge/MIT-License-f59e0b?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](./LICENSE)
+[![OpenClaw](https://img.shields.io/badge/OpenClaw-Skill-ff6b6b?style=for-the-badge&logo=openai&logoColor=white)](https://github.com/openclaw/openclaw)
 
 <br />
 
-🇬🇧 [English](./README.md) · 🇨🇳 [简体中文](./README_CN.md)
+[English](./README.md) · [简体中文](./README_CN.md)
+
+<br />
+
+<img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
 
 </div>
 
 <br />
 
----
+## What is TradeOS?
+
+> **One sentence to trade. One layer to rule them all.**
+
+TradeOS is an [OpenClaw](https://github.com/openclaw/openclaw) Skill that transforms natural language into secure, auditable exchange operations across **100+ centralized cryptocurrency exchanges**. It functions as a complete trading infrastructure layer — handling key management, order execution, risk enforcement, portfolio analytics, and autonomous strategies — so AI agents can operate with the same rigor expected of institutional trading desks.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  All keys encrypted at rest (AES-256-GCM)                   │
+│  All data stays local — zero cloud dependency               │
+│  All trades require explicit confirmation                    │
+└─────────────────────────────────────────────────────────────┘
+```
 
 <br />
 
-## Overview
-
-TradeOS is an [OpenClaw](https://github.com/openclaw/openclaw) Skill that transforms natural language into secure, auditable exchange operations across 100+ centralized cryptocurrency exchanges. It functions as a complete trading infrastructure layer — handling key management, order execution, risk enforcement, portfolio analytics, and autonomous strategies — so AI agents can operate with the same rigor expected of institutional trading desks.
-
-All data stays local. All keys are encrypted at rest. All trades require explicit confirmation or pre-authorized strategy rules.
+<div align="center">
+<img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
+</div>
 
 <br />
 
 ## Feature Matrix
 
-| Module | Capability | Details |
-|:--|:--|:--|
-| Key Vault | Encrypted credential storage | AES-256-GCM with PBKDF2 key derivation (600K iterations) |
-| Trading Engine | Multi-exchange order execution | Market, limit, stop-loss, and take-profit orders across spot and futures |
-| Risk Guard | Pre-trade risk enforcement | Configurable per-order limits, daily caps, leverage ceilings, and automatic blocking |
-| DCA Automation | Dollar-cost averaging scheduler | Hourly, daily, weekly, or monthly buy plans with full PnL tracking |
-| Arbitrage Scanner | Cross-exchange spread detection | Real-time bid/ask analysis with net-profit thresholds after fees |
-| Funding Rate Monitor | Perpetual contract yield tracking | Annualized rate calculation with long/short opportunity alerts |
-| Conditional Orders | Trigger-based execution | Price target and percentage-change triggers, once or recurring with cooldowns |
-| Anomaly Detection | Account integrity monitoring | Balance drop alerts, unknown order detection, API failure tracking |
-| Security Auditor | API key health scoring | Per-exchange scoring (age, permissions, IP whitelist, connectivity) |
-| Portfolio Tracking | Multi-exchange asset aggregation | Unified balance view with allocation breakdowns and historical snapshots |
-| PnL Reports | Performance analytics | Daily, weekly, monthly, and quarterly trade performance reports |
+<table>
+<tr>
+<td width="50%">
+
+### Security & Infrastructure
+| Module | Capability |
+|:--|:--|
+| **Key Vault** | AES-256-GCM + PBKDF2 (600K iter) |
+| **Risk Guard** | Per-order limits, daily caps, leverage ceilings |
+| **Anomaly Detection** | Balance drops, unknown orders, API failures |
+| **Security Auditor** | Per-exchange health scoring |
+
+</td>
+<td width="50%">
+
+### Trading & Analytics
+| Module | Capability |
+|:--|:--|
+| **Trading Engine** | Market / Limit / Stop / TP across spot & futures |
+| **Portfolio Tracker** | Multi-exchange aggregation & snapshots |
+| **PnL Reports** | Daily, weekly, monthly & quarterly reports |
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+### Autonomous Strategies
+| Module | Capability |
+|:--|:--|
+| **DCA Scheduler** | Hourly / Daily / Weekly / Monthly auto-buys |
+| **Conditional Orders** | Price triggers, once or recurring + cooldowns |
+
+</td>
+<td width="50%">
+
+### Market Intelligence
+| Module | Capability |
+|:--|:--|
+| **Arbitrage Scanner** | Cross-exchange spread detection (net of fees) |
+| **Funding Rates** | Perpetual contract yield tracking & alerts |
+
+</td>
+</tr>
+</table>
+
+<br />
+
+<div align="center">
+<img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
+</div>
 
 <br />
 
@@ -79,151 +139,286 @@ flowchart TB
 
     Core --> DB[("SQLite\nPortfolio DB\nTrade DB")]
 
-    style User fill:#f8f9fa,stroke:#343a40,color:#343a40
-    style OpenClaw fill:#e9ecef,stroke:#343a40,color:#343a40
-    style Core fill:#1a1a2e,stroke:#1a1a2e,color:#e9ecef
-    style Vault fill:#16213e,stroke:#16213e,color:#e9ecef
-    style EM fill:#16213e,stroke:#16213e,color:#e9ecef
-    style OE fill:#16213e,stroke:#16213e,color:#e9ecef
-    style RG fill:#16213e,stroke:#16213e,color:#e9ecef
-    style CCXT fill:#0f3460,stroke:#0f3460,color:#e9ecef
-    style EX fill:#0f3460,stroke:#0f3460,color:#e9ecef
-    style DCA fill:#16213e,stroke:#16213e,color:#e9ecef
-    style ARB fill:#16213e,stroke:#16213e,color:#e9ecef
-    style FR fill:#16213e,stroke:#16213e,color:#e9ecef
-    style CO fill:#16213e,stroke:#16213e,color:#e9ecef
-    style AD fill:#16213e,stroke:#16213e,color:#e9ecef
-    style SR fill:#16213e,stroke:#16213e,color:#e9ecef
-    style DB fill:#0f3460,stroke:#0f3460,color:#e9ecef
+    style User fill:#0d1117,stroke:#58a6ff,color:#c9d1d9,stroke-width:2px
+    style OpenClaw fill:#0d1117,stroke:#58a6ff,color:#c9d1d9,stroke-width:2px
+    style Core fill:#161b22,stroke:#f78166,color:#f0f6fc,stroke-width:3px
+    style Vault fill:#161b22,stroke:#7ee787,color:#c9d1d9,stroke-width:2px
+    style EM fill:#161b22,stroke:#7ee787,color:#c9d1d9,stroke-width:2px
+    style OE fill:#161b22,stroke:#7ee787,color:#c9d1d9,stroke-width:2px
+    style RG fill:#161b22,stroke:#7ee787,color:#c9d1d9,stroke-width:2px
+    style CCXT fill:#0d1117,stroke:#d2a8ff,color:#c9d1d9,stroke-width:2px
+    style EX fill:#0d1117,stroke:#d2a8ff,color:#c9d1d9,stroke-width:2px
+    style DCA fill:#161b22,stroke:#79c0ff,color:#c9d1d9
+    style ARB fill:#161b22,stroke:#79c0ff,color:#c9d1d9
+    style FR fill:#161b22,stroke:#79c0ff,color:#c9d1d9
+    style CO fill:#161b22,stroke:#79c0ff,color:#c9d1d9
+    style AD fill:#161b22,stroke:#79c0ff,color:#c9d1d9
+    style SR fill:#161b22,stroke:#79c0ff,color:#c9d1d9
+    style DB fill:#0d1117,stroke:#ffa657,color:#c9d1d9,stroke-width:2px
 ```
+
+<br />
+
+<div align="center">
+<img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
+</div>
 
 <br />
 
 ## Quick Start
 
-**1. Clone and build**
-
 ```bash
+# 1. Clone into your OpenClaw skills directory
 git clone https://github.com/00xLazy/TradeOS.git ~/.openclaw/skills/TradeOS
-cd ~/.openclaw/skills/TradeOS
-npm install && npm run build
+
+# 2. Install & build
+cd ~/.openclaw/skills/TradeOS && npm install && npm run build
 ```
 
-**2. Initialize the vault**
+Then, in your OpenClaw agent:
 
+```
 > "Initialize my TradeOS vault with a master password."
+> "Add my Binance API key. The key is XXXX and the secret is YYYY."
+```
 
-**3. Connect an exchange**
+TradeOS will encrypt the credentials, verify the connection, check permission scopes, and **reject any key with withdrawal access enabled**.
 
-> "Add my Binance API key. The key is `XXXX` and the secret is `YYYY`."
+<br />
 
-TradeOS will encrypt the credentials, verify the connection, check permission scopes, and reject any key with withdrawal access enabled.
+<div align="center">
+<img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
+</div>
 
 <br />
 
 ## Supported Exchanges
 
-| Exchange | ID | Spot | Futures |
-|:--|:--|:--:|:--:|
-| Binance | `binance` | Yes | Yes |
-| OKX | `okx` | Yes | Yes |
-| Bybit | `bybit` | Yes | Yes |
-| Gate.io | `gateio` | Yes | Yes |
-| Bitget | `bitget` | Yes | Yes |
-| Coinbase | `coinbase` | Yes | — |
-| KuCoin | `kucoin` | Yes | Yes |
-| HTX | `htx` | Yes | Yes |
-| MEXC | `mexc` | Yes | Yes |
-| Crypto.com | `cryptocom` | Yes | — |
+<div align="center">
 
-> 100+ additional exchanges supported via [CCXT](https://github.com/ccxt/ccxt).
+| Exchange | ID | Spot | Futures | |
+|:--|:--|:--:|:--:|:--|
+| **Binance** | `binance` | Yes | Yes | World's largest by volume |
+| **OKX** | `okx` | Yes | Yes | Advanced derivatives platform |
+| **Bybit** | `bybit` | Yes | Yes | Leading perpetuals exchange |
+| **Gate.io** | `gateio` | Yes | Yes | 1700+ trading pairs |
+| **Bitget** | `bitget` | Yes | Yes | Copy-trading leader |
+| **Coinbase** | `coinbase` | Yes | — | Regulated US exchange |
+| **KuCoin** | `kucoin` | Yes | Yes | The people's exchange |
+| **HTX** | `htx` | Yes | Yes | Global digital asset platform |
+| **MEXC** | `mexc` | Yes | Yes | Fast listing exchange |
+| **Crypto.com** | `cryptocom` | Yes | — | Consumer-friendly platform |
+
+</div>
+
+> **100+ additional exchanges** supported via [CCXT](https://github.com/ccxt/ccxt). If your exchange speaks REST, TradeOS can trade on it.
 
 <br />
+
+<div align="center">
+<img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
+</div>
+
+<br />
+
+## Usage Examples
+
+<details open>
+<summary><strong>Trading</strong></summary>
+
+```
+You:     Buy 0.1 BTC on Binance at market price.
+
+TradeOS: ┌─ Order Preview ───────────────────────┐
+         │ Exchange:    Binance                   │
+         │ Pair:        BTC/USDT                  │
+         │ Side:        BUY                       │
+         │ Type:        Market                    │
+         │ Amount:      0.1 BTC                   │
+         │ Est. Cost:   ~$8,430.20                │
+         │ Est. Fee:    ~$8.43                    │
+         │ Risk Check:  PASSED                    │
+         └────────────────────────────────────────┘
+         Reply "confirm" to execute.
+
+You:     confirm
+
+TradeOS: Filled @ $84,302.50 | 0.1 BTC | Fee: 0.0001 BTC
+```
+
+</details>
 
 <details>
-<summary><strong>Usage Examples</strong></summary>
+<summary><strong>DCA Automation</strong></summary>
 
-<br />
+```
+You:     Set up a daily DCA plan to buy $100 of ETH on Bybit at 9am.
 
-All interaction happens through natural language with your OpenClaw agent.
+TradeOS: ┌─ DCA Plan Created ───────────────────┐
+         │ Name:       Daily ETH DCA             │
+         │ Exchange:   Bybit                     │
+         │ Pair:       ETH/USDT                  │
+         │ Amount:     $100/day @ 09:00 UTC      │
+         │ Status:     RUNNING                   │
+         │ Next exec:  Tomorrow 09:00            │
+         └────────────────────────────────────────┘
+```
 
-**Trading**
+</details>
 
-> "Buy 0.1 BTC on Binance at market price."
+<details>
+<summary><strong>Arbitrage Scanning</strong></summary>
 
-TradeOS will preview the order (price, estimated cost, fees, risk checks), then wait for your explicit confirmation before executing.
+```
+You:     Scan for arbitrage on BTC/USDT across Binance, OKX, and Bybit.
 
-**DCA**
+TradeOS: ┌─ Arbitrage Results ──────────────────┐
+         │                                       │
+         │ BTC/USDT                              │
+         │ Buy on OKX:        $84,290 (ask)      │
+         │ Sell on Binance:   $84,350 (bid)      │
+         │ Gross spread:      0.071%             │
+         │ Net profit:        0.051% (after fees)│
+         │                                       │
+         │ Below 0.1% threshold — monitor only   │
+         └────────────────────────────────────────┘
+```
 
-> "Set up a daily DCA plan to buy $100 of ETH on Bybit at 9am."
+</details>
 
-Creates an autonomous recurring buy. Pre-authorized at creation — no per-execution confirmation needed. Risk guard remains active.
+<details>
+<summary><strong>Portfolio Overview</strong></summary>
 
-**Arbitrage**
+```
+You:     Show me my total balance across all exchanges.
 
-> "Scan for arbitrage opportunities on BTC/USDT across Binance, OKX, and Bybit."
+TradeOS: ┌─ Portfolio Summary ──────────────────┐
+         │                                       │
+         │ Binance .............. $45,230.00      │
+         │ OKX ................. $12,800.00      │
+         │ Bybit ................. $3,200.00     │
+         │                    ──────────────      │
+         │ Total:              $61,230.00        │
+         │                                       │
+         │ ██████████████░░░░░░ BTC   42%        │
+         │ █████████░░░░░░░░░░░ ETH   20%        │
+         │ ███████░░░░░░░░░░░░░ USDT  31%        │
+         │ ██░░░░░░░░░░░░░░░░░░ SOL    7%        │
+         └────────────────────────────────────────┘
+```
 
-Returns net-profit spreads after estimated fees, using real bid/ask prices.
+</details>
 
-**Portfolio**
+<details>
+<summary><strong>Conditional Orders</strong></summary>
 
-> "Show me my total balance across all exchanges."
+```
+You:     If ETH drops below $3,000, buy 2 ETH on OKX.
 
-Aggregates holdings from every connected exchange into a unified view with USD valuations and allocation percentages.
-
-**Conditional Orders**
-
-> "If ETH drops below $3,000, buy 2 ETH on OKX."
-
-Creates a trigger-based order that monitors price and executes automatically when the condition is met.
+TradeOS: ┌─ Conditional Order ─────────────────┐
+         │ Trigger:    ETH/USDT < $3,000.00     │
+         │ Action:     BUY 2 ETH @ Market       │
+         │ Exchange:   OKX                       │
+         │ Mode:       One-time                  │
+         │ Status:     MONITORING (every 15s)    │
+         └────────────────────────────────────────┘
+```
 
 </details>
 
 <br />
 
+<div align="center">
+<img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
+</div>
+
+<br />
+
 ## Data Storage
 
-All data is stored locally on your machine. Nothing is transmitted to external servers.
+All data is stored **locally on your machine**. Nothing is transmitted to external servers.
 
 ```
 ~/.openclaw/skills/TradeOS/
+│
 ├── vault/
-│   └── exchanges.enc.json        # Encrypted API credentials
+│   └── exchanges.enc.json          Encrypted API credentials
+│
 ├── data/
-│   ├── portfolio.db              # Asset snapshots (SQLite)
-│   └── trades.db                 # Trade records (SQLite)
+│   ├── portfolio.db                Asset snapshots (SQLite)
+│   └── trades.db                   Trade records (SQLite)
+│
 ├── alerts/
-│   └── rules.json                # Alert rule definitions
+│   └── rules.json                  Alert rule definitions
+│
 ├── dca/
-│   ├── plans.json                # DCA plan configurations
-│   └── history.json              # DCA execution log
+│   ├── plans.json                  DCA plan configurations
+│   └── history.json                DCA execution log
+│
 ├── arbitrage/
-│   └── config.json               # Arbitrage scanner settings
+│   └── config.json                 Arbitrage scanner settings
+│
 ├── funding/
-│   └── config.json               # Funding rate monitor settings
+│   └── config.json                 Funding rate monitor settings
+│
 ├── conditional-orders/
-│   ├── orders.json               # Conditional order definitions
-│   └── history.json              # Execution history
+│   ├── orders.json                 Conditional order definitions
+│   └── history.json                Execution history
+│
 ├── anomaly/
-│   ├── config.json               # Anomaly detection settings
-│   └── snapshots.json            # Balance snapshot history
+│   ├── config.json                 Anomaly detection settings
+│   └── snapshots.json              Balance snapshot history
+│
 ├── security/
-│   ├── config.json               # Security auditor settings
-│   └── last-report.json          # Most recent security report
-└── risk-rules.json               # Risk management rules
+│   ├── config.json                 Security auditor settings
+│   └── last-report.json            Most recent security report
+│
+└── risk-rules.json                 Risk management rules
 ```
+
+<br />
+
+<div align="center">
+<img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
+</div>
 
 <br />
 
 ## Security
 
-| TradeOS enforces | You should configure |
-|:--|:--|
-| AES-256-GCM encryption for all stored credentials | Trade-only API permissions — never enable withdrawal |
-| Automatic rejection of keys with withdrawal access | IP whitelist on every exchange API key |
-| Mandatory preview and confirm flow for manual trades | Strong, unique master password for the vault |
-| File permissions set to `600` (owner-only read/write) | Risk rule limits appropriate to your risk tolerance |
-| Full API key masking in logs and chat output | Running OpenClaw on a secure, private machine |
+<table>
+<tr>
+<td>
+
+### TradeOS Enforces
+
+- **AES-256-GCM** encryption for all stored credentials
+- Automatic **rejection** of keys with withdrawal access
+- Mandatory **preview + confirm** flow for manual trades
+- File permissions set to **`chmod 600`** (owner-only)
+- Full API key **masking** in logs and chat output
+- Risk guard **always active** — even for automated strategies
+
+</td>
+<td>
+
+### You Should Configure
+
+- **Never** enable withdrawal on API keys
+- **IP whitelist** on every exchange API key
+- **Strong, unique** master password for the vault
+- **Risk limits** matching your risk tolerance
+- Run on a **secure, private** machine
+
+</td>
+</tr>
+</table>
+
+<br />
+
+<div align="center">
+<img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
+</div>
 
 <br />
 
@@ -260,14 +455,21 @@ All data is stored locally on your machine. Nothing is transmitted to external s
 
 <br />
 
----
+<div align="center">
+<img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
 
 <br />
 
-<div align="center">
+**Built with** [OpenClaw](https://github.com/openclaw/openclaw) · [CCXT](https://github.com/ccxt/ccxt) · [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
 
-Built with [OpenClaw](https://github.com/openclaw/openclaw) · [CCXT](https://github.com/ccxt/ccxt) · [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
+<br />
 
+```
 Built for autonomous trading infrastructure.
+```
+
+<br />
+
+<sub>Made by <a href="https://github.com/00xLazy">00xLazy</a></sub>
 
 </div>
