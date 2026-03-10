@@ -65,7 +65,7 @@ export class PnLTracker {
     const dbDir = path.join(dataDir, 'data');
     try {
       if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
+        fs.mkdirSync(dbDir, { recursive: true, mode: 0o700 });
       }
     } catch (err: any) {
       console.error(`[PnLTracker] 无法创建数据目录 ${dbDir}:`, err.message);

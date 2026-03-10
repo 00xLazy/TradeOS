@@ -522,7 +522,7 @@ export class ConditionalOrderManager {
   private saveOrders(): void {
     const dir = path.dirname(this.ordersPath);
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
     }
     fs.writeFileSync(this.ordersPath, JSON.stringify(this.orders, null, 2), 'utf8');
     fs.chmodSync(this.ordersPath, 0o600);
@@ -549,7 +549,7 @@ export class ConditionalOrderManager {
   private saveHistory(): void {
     const dir = path.dirname(this.historyPath);
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
     }
     const obj: Record<string, ConditionalOrderExecution[]> = {};
     for (const [orderId, records] of this.history) {

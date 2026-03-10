@@ -375,7 +375,7 @@ export class SecurityReporter {
   private saveConfig(): void {
     const dir = path.dirname(this.configPath);
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
     }
     fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2), 'utf8');
     fs.chmodSync(this.configPath, 0o600);
@@ -395,7 +395,7 @@ export class SecurityReporter {
   private saveLastReport(): void {
     const dir = path.dirname(this.reportPath);
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
     }
     fs.writeFileSync(this.reportPath, JSON.stringify(this.lastReport, null, 2), 'utf8');
     fs.chmodSync(this.reportPath, 0o600);

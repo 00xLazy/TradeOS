@@ -6,6 +6,7 @@
 
 import ccxt, { type Exchange, type Balances, type Ticker, type Market } from 'ccxt';
 import { KeyVault, type ExchangeCredential } from './key-vault.js';
+import { sanitizeSensitiveText } from './security-utils.js';
 
 // ─── 支持的交易所 ───
 
@@ -289,7 +290,7 @@ export class ExchangeManager {
         if (type === 'taker' && typeof fees.taker === 'number') return fees.taker;
       }
     } catch (err: any) {
-      console.warn(`[ExchangeManager] 无法获取 ${exchangeId} ${symbol} 的 ${type} 手续费率，使用默认值 0.001:`, err.message);
+      console.warn(`[ExchangeManager] 无法获取 ${exchangeId} ${symbol} 的 ${type} 手续费率，使用默认值 0.001:`, sanitizeSensitiveText(err.message));
     }
     // 默认值：0.1%
     return 0.001;
@@ -312,7 +313,7 @@ export class ExchangeManager {
       await exchange.fetchBalance();
       permissions.push('read');
     } catch (err: any) {
-      console.debug(`[ExchangeManager] ${exchange.id} 不具备读取余额权限:`, err.message);
+      console.debug(`[ExchangeManager] ${exchange.id} 不具备读取余额权限:`, sanitizeSensitiveText(err.message));
     }
 
     // 尝试查看挂单 → 说明有交易读权限
@@ -320,7 +321,7 @@ export class ExchangeManager {
       await exchange.fetchOpenOrders();
       permissions.push('spot');
     } catch (err: any) {
-      console.debug(`[ExchangeManager] ${exchange.id} 不具备现货交易权限:`, err.message);
+      console.debug(`[ExchangeManager] ${exchange.id} 不具备现货交易权限:`, sanitizeSensitiveText(err.message));
     }
 
     // 检测提现权限：通过交易所 API 返回的权限信息
@@ -340,7 +341,7 @@ export class ExchangeManager {
         }
       }
     } catch (err: any) {
-      console.debug(`[ExchangeManager] ${exchange.id} 不支持 fetchApiPermissions 或权限检测失败:`, err.message);
+      console.debug(`[ExchangeManager] ${exchange.id} 不支持 fetchApiPermissions 或权限检测失败:`, sanitizeSensitiveText(err.message));
     }
 
     // 备用检测：尝试调用获取充提历史（如果成功则可能有提现权限）
@@ -352,7 +353,7 @@ export class ExchangeManager {
           hasWithdraw = true;
         }
       } catch (err: any) {
-        console.debug(`[ExchangeManager] ${exchange.id} 不具备读取提现记录权限或不支持 fetchWithdrawals:`, err.message);
+        console.debug(`[ExchangeManager] ${exchange.id} 不具备读取提现记录权限或不支持 fetchWithdrawals:`, sanitizeSensitiveText(err.message));
         // 无权限或交易所不支持，视为安全
       }
     }
@@ -482,7 +483,7 @@ export class ExchangeManager {
           }
         }
       } catch (err: any) {
-        console.warn(`[ExchangeManager] 从 ${exchange.id} 批量获取行情失败，尝试逐个获取:`, err.message);
+        console.warn(`[ExchangeManager] 从 ${exchange.id} 批量获取行情失败，尝试逐个获取:`, sanitizeSensitiveText(err.message));
         // 如果批量获取失败，逐个获取
         for (const sym of symbols) {
           try {
@@ -490,7 +491,7 @@ export class ExchangeManager {
             const coin = sym.split('/')[0];
             if (ticker.last) prices[coin] = ticker.last;
           } catch (individualErr: any) {
-            console.warn(`[ExchangeManager] 从 ${exchange.id} 获取 ${sym} 行情失败，跳过:`, individualErr.message);
+            console.warn(`[ExchangeManager] 从 ${exchange.id} 获取 ${sym} 行情失败，跳过:`, sanitizeSensitiveText(individualErr.message));
           }
         }
       }

@@ -277,9 +277,13 @@ export class KeyVault {
     masterPassword: string,
     credentials: ExchangeCredential[]
   ): Promise<void> {
+    if (masterPassword.length < 12) {
+      throw new Error('主密码长度不足：至少需要 12 个字符。');
+    }
+
     const dir = path.dirname(this.vaultPath);
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
     }
 
     // 将所有凭证作为一个整体加密（单次 PBKDF2），而非逐个加密

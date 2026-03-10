@@ -258,7 +258,7 @@ export class RiskGuard {
   private saveRules(): void {
     const dir = path.dirname(this.configPath);
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
     }
     fs.writeFileSync(this.configPath, JSON.stringify(this.rules, null, 2), 'utf8');
     fs.chmodSync(this.configPath, 0o600);
@@ -279,7 +279,7 @@ export class RiskGuard {
   private saveTrades(): void {
     const dir = path.dirname(this.tradesPath);
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
     }
     fs.writeFileSync(this.tradesPath, JSON.stringify(this.todayTrades), 'utf8');
     fs.chmodSync(this.tradesPath, 0o600);
@@ -296,6 +296,12 @@ export class RiskGuard {
 
     return {
       ...rules,
+      maxOrderValueUSD: Math.max(rules.maxOrderValueUSD, 1),
+      maxDailyVolumeUSD: Math.max(rules.maxDailyVolumeUSD, 1),
+      maxLeverage: Math.max(rules.maxLeverage, 1),
+      maxSlippagePercent: Math.max(rules.maxSlippagePercent, 0.01),
+      confirmThresholdUSD: Math.max(rules.confirmThresholdUSD, 1),
+      cooldownSeconds: Math.max(rules.cooldownSeconds, 1),
       blockedSymbols,
     };
   }

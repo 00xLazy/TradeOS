@@ -127,6 +127,10 @@ export class OrderExecutor {
     }
 
     // 生成一次性确认 token
+    this.cleanExpiredTokens();
+    if (this.pendingConfirmations.size >= 100) {
+      throw new Error('待确认订单过多，请先处理已有订单或等待其过期。');
+    }
     const confirmationToken = crypto.randomBytes(32).toString('hex');
     this.pendingConfirmations.set(confirmationToken, {
       token: confirmationToken,

@@ -600,7 +600,7 @@ export class DcaScheduler {
   private savePlans(): void {
     const dir = path.dirname(this.plansPath);
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
     }
     fs.writeFileSync(this.plansPath, JSON.stringify(this.plans, null, 2), 'utf8');
     fs.chmodSync(this.plansPath, 0o600);
@@ -627,7 +627,7 @@ export class DcaScheduler {
   private saveHistory(): void {
     const dir = path.dirname(this.historyPath);
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
     }
     const obj: Record<string, DcaExecutionRecord[]> = {};
     for (const [planId, records] of this.history) {
