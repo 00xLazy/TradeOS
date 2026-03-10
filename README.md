@@ -27,13 +27,21 @@
 
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
 
-<br />
+</div>
+
+<div align="center">
 
 ## What is TradeOS?
 
 **One sentence to trade. One layer to rule them all.**
 
+</div>
+
+<div align="center">
+
 TradeOS is an [OpenClaw](https://github.com/openclaw/openclaw) Skill that transforms natural language into secure, auditable exchange operations across **100+ centralized cryptocurrency exchanges**. It functions as a complete trading infrastructure layer — handling key management, order execution, risk enforcement, portfolio analytics, and autonomous strategies — so AI agents can operate with the same rigor expected of institutional trading desks.
+
+</div>
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -43,19 +51,21 @@ TradeOS is an [OpenClaw](https://github.com/openclaw/openclaw) Skill that transf
 └─────────────────────────────────────────────────────────────┘
 ```
 
+<div align="center">
 <br />
-
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
-
-<br />
 
 ## Feature Matrix
 
+</div>
+
+<div align="center">
 <table>
 <tr>
 <td width="50%">
 
-### Security & Infrastructure
+**Security & Infrastructure**
+
 | Module | Capability |
 |:--|:--|
 | **Key Vault** | AES-256-GCM + PBKDF2 (600K iter) |
@@ -66,7 +76,8 @@ TradeOS is an [OpenClaw](https://github.com/openclaw/openclaw) Skill that transf
 </td>
 <td width="50%">
 
-### Trading & Analytics
+**Trading & Analytics**
+
 | Module | Capability |
 |:--|:--|
 | **Trading Engine** | Market / Limit / Stop / TP across spot & futures |
@@ -78,7 +89,8 @@ TradeOS is an [OpenClaw](https://github.com/openclaw/openclaw) Skill that transf
 <tr>
 <td width="50%">
 
-### Autonomous Strategies
+**Autonomous Strategies**
+
 | Module | Capability |
 |:--|:--|
 | **DCA Scheduler** | Hourly / Daily / Weekly / Monthly auto-buys |
@@ -87,7 +99,8 @@ TradeOS is an [OpenClaw](https://github.com/openclaw/openclaw) Skill that transf
 </td>
 <td width="50%">
 
-### Market Intelligence
+**Market Intelligence**
+
 | Module | Capability |
 |:--|:--|
 | **Arbitrage Scanner** | Cross-exchange spread detection (net of fees) |
@@ -96,14 +109,15 @@ TradeOS is an [OpenClaw](https://github.com/openclaw/openclaw) Skill that transf
 </td>
 </tr>
 </table>
+</div>
 
+<div align="center">
 <br />
-
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
 
-<br />
-
 ## Architecture
+
+</div>
 
 ```mermaid
 flowchart TB
@@ -151,13 +165,13 @@ flowchart TB
     style DB fill:#0d1117,stroke:#ffa657,color:#c9d1d9,stroke-width:2px
 ```
 
+<div align="center">
 <br />
-
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
 
-<br />
-
 ## Quick Start
+
+</div>
 
 ```bash
 # 1. Clone into your OpenClaw skills directory
@@ -167,20 +181,23 @@ git clone https://github.com/00xLazy/TradeOS.git ~/.openclaw/skills/TradeOS
 cd ~/.openclaw/skills/TradeOS && npm install && npm run build
 ```
 
+<div align="center">
+
 Then, in your OpenClaw agent:
+
+</div>
 
 ```
 > "Initialize my TradeOS vault with a master password."
 > "Add my Binance API key. The key is XXXX and the secret is YYYY."
 ```
 
+<div align="center">
+
 TradeOS will encrypt the credentials, verify the connection, check permission scopes, and **reject any key with withdrawal access enabled**.
 
 <br />
-
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
-
-<br />
 
 ## Supported Exchanges
 
@@ -200,12 +217,11 @@ TradeOS will encrypt the credentials, verify the connection, check permission sc
 **100+ additional exchanges** supported via [CCXT](https://github.com/ccxt/ccxt). If your exchange speaks REST, TradeOS can trade on it.
 
 <br />
-
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
 
-<br />
-
 ## Usage Examples
+
+</div>
 
 <details open>
 <summary><strong>Trading</strong></summary>
@@ -310,15 +326,15 @@ TradeOS: ┌─ Conditional Order ───────────────�
 
 </details>
 
+<div align="center">
 <br />
-
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
-
-<br />
 
 ## Data Storage
 
 All data is stored **locally on your machine**. Nothing is transmitted to external servers.
+
+</div>
 
 ```
 ~/.openclaw/skills/TradeOS/
@@ -358,19 +374,20 @@ All data is stored **locally on your machine**. Nothing is transmitted to extern
 └── risk-rules.json                 Risk management rules
 ```
 
+<div align="center">
 <br />
-
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
-
-<br />
 
 ## Security
 
+</div>
+
+<div align="center">
 <table>
 <tr>
 <td>
 
-### TradeOS Enforces
+**TradeOS Enforces**
 
 - **AES-256-GCM** encryption for all stored credentials
 - Automatic **rejection** of keys with withdrawal access
@@ -382,7 +399,7 @@ All data is stored **locally on your machine**. Nothing is transmitted to extern
 </td>
 <td>
 
-### You Should Configure
+**You Should Configure**
 
 - **Never** enable withdrawal on API keys
 - **IP whitelist** on every exchange API key
@@ -393,12 +410,12 @@ All data is stored **locally on your machine**. Nothing is transmitted to extern
 </td>
 </tr>
 </table>
+</div>
 
+<div align="center">
 <br />
-
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
-
-<br />
+</div>
 
 <details>
 <summary><strong>Project Structure</strong></summary>
@@ -424,6 +441,8 @@ All data is stored **locally on your machine**. Nothing is transmitted to extern
 | Security Utilities | `scripts/security-utils.ts` | Shared cryptographic helpers |
 
 </details>
+
+<div align="center">
 
 <br />
 
