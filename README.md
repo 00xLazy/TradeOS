@@ -27,13 +27,11 @@
 
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
 
-</div>
-
 <br />
 
 ## What is TradeOS?
 
-> **One sentence to trade. One layer to rule them all.**
+**One sentence to trade. One layer to rule them all.**
 
 TradeOS is an [OpenClaw](https://github.com/openclaw/openclaw) Skill that transforms natural language into secure, auditable exchange operations across **100+ centralized cryptocurrency exchanges**. It functions as a complete trading infrastructure layer — handling key management, order execution, risk enforcement, portfolio analytics, and autonomous strategies — so AI agents can operate with the same rigor expected of institutional trading desks.
 
@@ -47,9 +45,7 @@ TradeOS is an [OpenClaw](https://github.com/openclaw/openclaw) Skill that transf
 
 <br />
 
-<div align="center">
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
-</div>
 
 <br />
 
@@ -103,9 +99,7 @@ TradeOS is an [OpenClaw](https://github.com/openclaw/openclaw) Skill that transf
 
 <br />
 
-<div align="center">
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
-</div>
 
 <br />
 
@@ -159,9 +153,7 @@ flowchart TB
 
 <br />
 
-<div align="center">
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
-</div>
 
 <br />
 
@@ -186,15 +178,11 @@ TradeOS will encrypt the credentials, verify the connection, check permission sc
 
 <br />
 
-<div align="center">
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
-</div>
 
 <br />
 
 ## Supported Exchanges
-
-<div align="center">
 
 | Exchange | ID | Spot | Futures | |
 |:--|:--|:--:|:--:|:--|
@@ -209,15 +197,11 @@ TradeOS will encrypt the credentials, verify the connection, check permission sc
 | **MEXC** | `mexc` | Yes | Yes | Fast listing exchange |
 | **Crypto.com** | `cryptocom` | Yes | — | Consumer-friendly platform |
 
-</div>
-
-> **100+ additional exchanges** supported via [CCXT](https://github.com/ccxt/ccxt). If your exchange speaks REST, TradeOS can trade on it.
+**100+ additional exchanges** supported via [CCXT](https://github.com/ccxt/ccxt). If your exchange speaks REST, TradeOS can trade on it.
 
 <br />
 
-<div align="center">
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
-</div>
 
 <br />
 
@@ -328,9 +312,7 @@ TradeOS: ┌─ Conditional Order ───────────────�
 
 <br />
 
-<div align="center">
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
-</div>
 
 <br />
 
@@ -378,9 +360,7 @@ All data is stored **locally on your machine**. Nothing is transmitted to extern
 
 <br />
 
-<div align="center">
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
-</div>
 
 <br />
 
@@ -416,9 +396,7 @@ All data is stored **locally on your machine**. Nothing is transmitted to extern
 
 <br />
 
-<div align="center">
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
-</div>
 
 <br />
 
@@ -455,7 +433,6 @@ All data is stored **locally on your machine**. Nothing is transmitted to extern
 
 <br />
 
-<div align="center">
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
 
 <br />
