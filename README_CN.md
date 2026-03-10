@@ -45,15 +45,18 @@ TradeOS 是一个 [OpenClaw](https://github.com/openclaw/openclaw) Skill（AI Ag
 
 </div>
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  所有 API Key 写入磁盘前使用 AES-256-GCM 加密              │
-│  所有数据完全本地存储 — 零云端依赖                          │
-│  所有交易必须经过明确确认                                   │
-└─────────────────────────────────────────────────────────────┘
-```
-
 <div align="center">
+
+<table>
+<tr><td>
+
+- 所有 API Key 写入磁盘前使用 **AES-256-GCM** 加密
+- 所有数据完全本地存储 — **零云端依赖**
+- 所有交易必须经过**明确确认**
+
+</td></tr>
+</table>
+
 <br />
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
 

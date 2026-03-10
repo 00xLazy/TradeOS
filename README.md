@@ -43,15 +43,18 @@ TradeOS is an [OpenClaw](https://github.com/openclaw/openclaw) Skill that transf
 
 </div>
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  All keys encrypted at rest (AES-256-GCM)                   │
-│  All data stays local — zero cloud dependency               │
-│  All trades require explicit confirmation                    │
-└─────────────────────────────────────────────────────────────┘
-```
-
 <div align="center">
+
+<table>
+<tr><td>
+
+- All keys encrypted at rest **(AES-256-GCM)**
+- All data stays local — **zero cloud dependency**
+- All trades require **explicit confirmation**
+
+</td></tr>
+</table>
+
 <br />
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="-----" />
 
