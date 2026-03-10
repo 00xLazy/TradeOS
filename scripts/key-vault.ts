@@ -277,8 +277,8 @@ export class KeyVault {
     masterPassword: string,
     credentials: ExchangeCredential[]
   ): Promise<void> {
-    if (masterPassword.length < 12) {
-      throw new Error('主密码长度不足：至少需要 12 个字符。');
+    if (masterPassword.length < 6) {
+      throw new Error('主密码长度不足：至少需要 6 个字符。');
     }
 
     const dir = path.dirname(this.vaultPath);
