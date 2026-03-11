@@ -1,6 +1,6 @@
 ---
 name: TradeOS
-description: 中心化交易所交易与资产管理。通过自然语言在 Binance、OKX、Bybit 等 100+ 交易所下单交易，监控账户余额，追踪损益，支持条件单、异常检测和安全报告。
+description: 交易所交易与资产管理。通过自然语言在 Binance、OKX、Bybit、HyperLiquid 等 100+ 交易所下单交易，监控账户余额，追踪损益，支持条件单、异常检测和安全报告。
 version: 0.4.0
 author: 00xLazy
 permissions:
@@ -69,8 +69,10 @@ tags:
 
 **添加交易所 API Key：**
 
-1. 询问用户要添加哪个交易所（binance / okx / bybit / gateio / bitget / coinbase / kucoin / htx / mexc / cryptocom）
-2. 请求用户提供：API Key、Secret、Passphrase（OKX 需要）
+1. 询问用户要添加哪个交易所（binance / okx / bybit / gateio / bitget / coinbase / kucoin / htx / mexc / cryptocom / hyperliquid）
+2. 请求用户提供：
+   - **CEX**（Binance、OKX 等）：API Key、Secret、Passphrase（OKX 需要）
+   - **HyperLiquid**：钱包私钥（privateKey）和钱包地址（walletAddress）
 3. 要求用户设置主密码（首次使用时）或输入已有主密码
 4. 安全提醒用户：
    - 建议在交易所后台仅授予"交易"权限，**绝对不要开启"提现"权限**
@@ -552,5 +554,5 @@ securityReporter.updateConfig({
 
 ## 6. Supported Exchanges
 
-binance, okx, bybit, gateio, bitget, coinbase, kucoin, htx, mexc, cryptocom
-（基于 CCXT 库，理论上支持 100+ 家交易所）
+binance, okx, bybit, gateio, bitget, coinbase, kucoin, htx, mexc, cryptocom, hyperliquid
+（基于 CCXT 库，理论上支持 100+ 家交易所。HyperLiquid 为 DEX，使用钱包私钥认证）

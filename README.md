@@ -216,6 +216,7 @@ TradeOS will encrypt the credentials, verify the connection, check permission sc
 | **HTX** | `htx` | Yes | Yes | Global digital asset platform |
 | **MEXC** | `mexc` | Yes | Yes | Fast listing exchange |
 | **Crypto.com** | `cryptocom` | Yes | — | Consumer-friendly platform |
+| **HyperLiquid** | `hyperliquid` | Yes | Yes | On-chain perpetuals DEX |
 
 **100+ additional exchanges** supported via [CCXT](https://github.com/ccxt/ccxt). If your exchange speaks REST, TradeOS can trade on it.
 

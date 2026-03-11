@@ -21,6 +21,7 @@ export const SUPPORTED_EXCHANGES = [
   'htx',
   'mexc',
   'cryptocom',
+  'hyperliquid',
 ] as const;
 
 export type SupportedExchangeId = typeof SUPPORTED_EXCHANGES[number];
@@ -440,12 +441,25 @@ export class ExchangeManager {
     }
 
     const config: any = {
-      apiKey: cred.apiKey,
-      secret: cred.secret,
       enableRateLimit: true,
       timeout: 30_000,
     };
 
+    // HyperLiquid 等 DEX 使用钱包私钥 + 地址认证
+    if (cred.privateKey) {
+      config.privateKey = cred.privateKey;
+    }
+    if (cred.walletAddress) {
+      config.walletAddress = cred.walletAddress;
+    }
+
+    // 传统 CEX 使用 apiKey + secret
+    if (cred.apiKey) {
+      config.apiKey = cred.apiKey;
+    }
+    if (cred.secret) {
+      config.secret = cred.secret;
+    }
     if (cred.passphrase) {
       config.password = cred.passphrase;
     }

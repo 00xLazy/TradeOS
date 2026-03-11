@@ -9,7 +9,7 @@ export function sanitizeSensitiveText(input: string): string {
   let text = input;
 
   // 屏蔽常见密钥字段
-  text = text.replace(/(api[_-]?key|secret|passphrase|signature)\s*[=:]\s*([^\s&'",}]+)/gi, '$1=***');
+  text = text.replace(/(api[_-]?key|secret|passphrase|signature|private[_-]?key|wallet[_-]?address)\s*[=:]\s*([^\s&'",}]+)/gi, '$1=***');
 
   // 屏蔽形如 access_token=xxx / token: xxx
   text = text.replace(/(access[_-]?token|token)\s*[=:]\s*([^\s&'",}]+)/gi, '$1=***');

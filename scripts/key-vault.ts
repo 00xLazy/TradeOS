@@ -18,6 +18,8 @@ export interface ExchangeCredential {
   apiKey: string;
   secret: string;
   passphrase?: string;       // OKX 等交易所需要
+  privateKey?: string;       // HyperLiquid 等 DEX 使用钱包私钥认证
+  walletAddress?: string;    // HyperLiquid 等 DEX 使用钱包地址
   permissions: string[];     // ['spot', 'futures'] — 禁止 'withdraw'
   ipWhitelist?: string[];
   createdAt: number;
@@ -76,13 +78,24 @@ export class KeyVault {
       );
     }
 
-    // 安全检查：拒绝空 API Key 或 Secret
-    if (!credential.apiKey || !credential.secret) {
-      throw new Error('API Key 和 Secret 不能为空。');
-    }
+    // HyperLiquid 等 DEX 使用钱包私钥 + 地址认证，不需要 apiKey/secret
+    const usesWalletAuth = !!(credential.privateKey && credential.walletAddress);
 
-    if (credential.apiKey.length < 10 || credential.secret.length < 10) {
-      throw new Error('API Key 或 Secret 长度异常，请检查是否完整。');
+    if (usesWalletAuth) {
+      if (credential.privateKey!.length < 10) {
+        throw new Error('钱包私钥长度异常，请检查是否完整。');
+      }
+      if (credential.walletAddress!.length < 10) {
+        throw new Error('钱包地址长度异常，请检查是否完整。');
+      }
+    } else {
+      // 传统 CEX：验证 apiKey + secret
+      if (!credential.apiKey || !credential.secret) {
+        throw new Error('API Key 和 Secret 不能为空。');
+      }
+      if (credential.apiKey.length < 10 || credential.secret.length < 10) {
+        throw new Error('API Key 或 Secret 长度异常，请检查是否完整。');
+      }
     }
 
     const fullCredential: ExchangeCredential = {
@@ -147,7 +160,7 @@ export class KeyVault {
   async updateCredential(
     masterPassword: string,
     credentialId: string,
-    updates: Partial<Pick<ExchangeCredential, 'label' | 'apiKey' | 'secret' | 'passphrase' | 'permissions' | 'ipWhitelist'>>
+    updates: Partial<Pick<ExchangeCredential, 'label' | 'apiKey' | 'secret' | 'passphrase' | 'privateKey' | 'walletAddress' | 'permissions' | 'ipWhitelist'>>
   ): Promise<ExchangeCredential | null> {
     if (updates.permissions?.includes('withdraw')) {
       throw new Error('SECURITY: 拒绝含提现(withdraw)权限的 API Key。');
@@ -166,6 +179,16 @@ export class KeyVault {
       }
       if (updates.secret.length < 10) {
         throw new Error('Secret 长度异常，请检查是否完整。');
+      }
+    }
+    if (updates.privateKey !== undefined) {
+      if (!updates.privateKey || updates.privateKey.length < 10) {
+        throw new Error('钱包私钥长度异常，请检查是否完整。');
+      }
+    }
+    if (updates.walletAddress !== undefined) {
+      if (!updates.walletAddress || updates.walletAddress.length < 10) {
+        throw new Error('钱包地址长度异常，请检查是否完整。');
       }
     }
 
